@@ -1245,7 +1245,7 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                       {/* ── KALENDER ── */}
                       <div style={{ borderTop:"1px solid #F0F2F5", paddingTop:8, marginBottom:8 }}>
                         <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
-                          <span style={{ fontSize:10, color:"#1565C0", fontWeight:700 }}>📅 Ingepland op</span>
+                          <span style={{ fontSize:10, color:"#1565C0", fontWeight:700 }}>🚚 Leverdatum</span>
                           {(p.details?.[ci]?.datum) && (
                             <span style={{ background:"#E3F2FD", borderRadius:4,
                               padding:"1px 7px", fontSize:11, fontWeight:800, color:"#1565C0" }}>
@@ -2493,7 +2493,7 @@ function Onderdelen({ projects }) {
                       <div>📅 Start: <strong>{p.date}</strong></div>
                       {p.datum && (
                         <div style={{ color:"#1565C0", fontWeight:600 }}>
-                          🗓️ Ingepland: <strong>{p.datum}</strong>
+                          🚚 Leverdatum: <strong>{p.datum}</strong>
                         </div>
                       )}
                       {p.uitvoerder && (
