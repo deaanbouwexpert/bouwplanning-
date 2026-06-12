@@ -756,16 +756,18 @@ function TeamEditInline({ p, onSave, onClose }) {
   return (
     <div style={{ display:"flex", flexDirection:"column",
       background:"#fff", borderRadius:10, border:"2px solid #90CAF9",
-      boxShadow:"0 8px 40px rgba(0,0,0,.25)", width:560 }}>
+      boxShadow:"0 8px 40px rgba(0,0,0,.25)", width:580,
+      maxHeight:"88vh", overflow:"hidden" }}>
 
       {/* Tabs */}
-      <div style={{ display:"flex", background:"#E3F0FB", borderRadius:"6px 6px 0 0", padding:"4px 4px 0" }}>
+      <div style={{ display:"flex", background:"#E3F0FB", borderRadius:"10px 10px 0 0", padding:"4px 4px 0", flexShrink:0 }}>
         {[["algemeen","📋 Algemeen"],["onderdelen","🔩 Onderdelen"],["klant","👤 Klant"]].map(([k,l])=>(
           <button key={k} onClick={()=>setTab(k)} style={tabStyle(k)}>{l}</button>
         ))}
       </div>
 
-      <div style={{ padding:"12px", display:"flex", flexDirection:"column", gap:7 }}>
+      <div style={{ padding:"14px", display:"flex", flexDirection:"column", gap:8,
+        overflowY: tab==="onderdelen" ? "hidden" : "auto", flex:1 }}>
 
         {/* ── TAB: ALGEMEEN ── */}
         {tab==="algemeen" && <>
@@ -824,7 +826,8 @@ function TeamEditInline({ p, onSave, onClose }) {
 
         {/* ── TAB: ONDERDELEN ── */}
         {tab==="onderdelen" && <>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, height:"55vh", overflowY:"scroll", paddingRight:6, paddingBottom:8, alignContent:"start" }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:0, overflowY:"auto", flex:1,
+            height:"calc(88vh - 120px)", paddingRight:4 }}>
 
             {/* Helper components inline */}
             {(() => {
@@ -832,21 +835,23 @@ function TeamEditInline({ p, onSave, onClose }) {
                 const aan = actief[col] !== false;
                 const hasChildren = !!children;
                 return (
-                  <div style={{ borderRadius:6, border: aan?"1px solid #90CAF9":"1px solid #E0E0E0",
-                    background: aan?"#F0F8FF":"#F9F9F9", overflow:"hidden",
-                    gridColumn: (aan && hasChildren) ? "1 / -1" : "auto" }}>
+                  <div style={{ borderBottom:"1px solid #E8EAED",
+                    background: aan?"#F0F8FF":"#fff" }}>
                     <div onClick={()=>setActief(a=>({...a,[col]:!aan}))}
-                      style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 12px", cursor:"pointer" }}>
-                      <div style={{ width:22, height:22, borderRadius:4, flexShrink:0,
-                        background: aan?"#1565C0":"#fff", border: aan?"none":"2px solid #BDBDBD",
+                      style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 16px", cursor:"pointer",
+                        userSelect:"none" }}>
+                      <div style={{ width:26, height:26, borderRadius:5, flexShrink:0,
+                        background: aan?"#1565C0":"#fff", border: aan?"2px solid #1565C0":"2px solid #BDBDBD",
                         display:"flex", alignItems:"center", justifyContent:"center",
-                        color:"#fff", fontSize:13, fontWeight:900 }}>{aan?"✓":""}</div>
-                      <span style={{ fontSize:13, fontWeight:600, color: aan?"#1C2B3A":"#90A4AE", flex:1 }}>{col}</span>
-                      <span style={{ fontSize:10, fontWeight:700, color: aan?"#1565C0":"#BDBDBD",
-                        background: aan?"#E3F2FD":"#F5F5F5", padding:"2px 8px", borderRadius:3 }}>{aan?"AAN":"UIT"}</span>
+                        color:"#fff", fontSize:15, fontWeight:900, transition:"all .15s" }}>{aan?"✓":""}</div>
+                      <span style={{ fontSize:14, fontWeight: aan?700:500, color: aan?"#1C2B3A":"#90A4AE", flex:1 }}>{col}</span>
+                      <span style={{ fontSize:11, fontWeight:700,
+                        color: aan?"#fff":"#BDBDBD",
+                        background: aan?"#1565C0":"#E0E0E0",
+                        padding:"3px 12px", borderRadius:20, minWidth:42, textAlign:"center" }}>{aan?"AAN":"UIT"}</span>
                     </div>
                     {aan && children && (
-                      <div style={{ padding:"4px 12px 12px 42px", display:"flex", flexDirection:"column", gap:7 }}
+                      <div style={{ padding:"4px 16px 16px 56px", display:"flex", flexDirection:"column", gap:10, background:"#F8FBFF", borderTop:"1px solid #E3F2FD" }}
                         onClick={e=>e.stopPropagation()}>
                         {children}
                       </div>
