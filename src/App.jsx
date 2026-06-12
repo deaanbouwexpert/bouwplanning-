@@ -1446,18 +1446,82 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                 <div>
                   <Chip value={s} />
                   {(p.details?.[ci]?.datum || p.details?.[ci]?.uitvoerder) && (
-                    <div style={{ marginTop:3, fontSize:9, color:"#546E7A",
-                      lineHeight:1.4, textAlign:"left" }}>
-                      {p.details?.[ci]?.datum &&
-                        <div style={{ color:"#1565C0", fontWeight:600 }}>
-                          📅 {p.details[ci].datum}
-                        </div>}
-                      {p.details?.[ci]?.uitvoerder &&
-                        <div style={{ color:"#546E7A" }}>
-                          👷 {p.details[ci].uitvoerder}
-                        </div>}
+                    <div style={{ marginTop:3, fontSize:9, color:"#546E7A", lineHeight:1.4, textAlign:"left" }}>
+                      {p.details?.[ci]?.datum && <div style={{ color:"#1565C0", fontWeight:600 }}>📅 {p.details[ci].datum}</div>}
+                      {p.details?.[ci]?.uitvoerder && <div style={{ color:"#546E7A" }}>👷 {p.details[ci].uitvoerder}</div>}
                     </div>
                   )}
+                  {/* ── ONDERDEEL INFO uit ✏️ Bewerken popup ── */}
+                  {(() => {
+                    const ond = p.ond || {};
+                    const col = COLUMNS[ci];
+                    const infos = [];
+                    if (col === "Kozijn") {
+                      if (ond.kozijn_materiaal) infos.push(ond.kozijn_materiaal);
+                      if (ond.kozijn_notitie)   infos.push(ond.kozijn_notitie);
+                    }
+                    if (col === "Steen-strips / Metselwerk") {
+                      if (ond.steen_type)    infos.push(ond.steen_type);
+                      if (ond.steen_notitie) infos.push(ond.steen_notitie);
+                    }
+                    if (col === "Lichtstraat") {
+                      if (ond.lichtstraat_maat)   infos.push("Maat: " + ond.lichtstraat_maat);
+                      if (ond.lichtstraat_notitie) infos.push(ond.lichtstraat_notitie);
+                    }
+                    if (col === "Heiwerk") {
+                      if (ond.hei_palen)   infos.push(ond.hei_palen + " palen");
+                      if (ond.hei_notitie) infos.push(ond.hei_notitie);
+                    }
+                    if (col === "Fundering") {
+                      if (ond.fund_type)    infos.push(ond.fund_type);
+                      if (ond.fund_beton)   infos.push(ond.fund_beton + " m³ beton");
+                      if (ond.fund_notitie) infos.push(ond.fund_notitie);
+                    }
+                    if (col === "Verwarming") {
+                      if (ond.verw_type) infos.push(ond.verw_type);
+                      if (ond.verw_radiator_aantal) infos.push(ond.verw_radiator_aantal + "x radiator");
+                      if (ond.verw_m2)   infos.push(ond.verw_m2 + " m²");
+                      if (ond.verw_notitie) infos.push(ond.verw_notitie);
+                    }
+                    if (col === "Dakbedekking") {
+                      if (ond.dak_type)    infos.push(ond.dak_type);
+                      if (ond.dak_notitie) infos.push(ond.dak_notitie);
+                    }
+                    if (col === "Tegelwerk") {
+                      if (ond.tegel_m2)    infos.push(ond.tegel_m2 + " m²");
+                      if (ond.tegel_notitie) infos.push(ond.tegel_notitie);
+                    }
+                    if (col === "Stucwerk") {
+                      if (ond.stuc_m2)    infos.push(ond.stuc_m2 + " m²");
+                      if (ond.stuc_notitie) infos.push(ond.stuc_notitie);
+                    }
+                    if (col === "Loodgieter") {
+                      if (ond.lood_buitenkraan) infos.push("Buitenkraan: " + ond.lood_buitenkraan);
+                      if (ond.lood_notitie)     infos.push(ond.lood_notitie);
+                    }
+                    if (col === "Container") {
+                      if (ond.cont_aantal)  infos.push(ond.cont_aantal + "x container");
+                      if (ond.cont_notitie) infos.push(ond.cont_notitie);
+                    }
+                    if (col === "Staal"                     && ond.staal_notitie)      infos.push(ond.staal_notitie);
+                    if (col === "Constructie berekening"    && ond.constructie_notitie) infos.push(ond.constructie_notitie);
+                    if (col === "Electra"                   && ond.electra_notitie)    infos.push(ond.electra_notitie);
+                    if (col === "Hijsen"                    && ond.hijsen_notitie)     infos.push(ond.hijsen_notitie);
+                    if (col === "Steigers"                  && ond.steigers_notitie)   infos.push(ond.steigers_notitie);
+                    if (col === "Trap"                      && ond.trap_notitie)       infos.push(ond.trap_notitie);
+                    if (col === "Extra"                     && ond.extra_notitie)      infos.push(ond.extra_notitie);
+                    if (!infos.length) return null;
+                    return (
+                      <div style={{ marginTop:3, textAlign:"left" }}>
+                        {infos.map((info, i) => (
+                          <div key={i} style={{ fontSize:9, color:"#E65100", fontWeight:600,
+                            lineHeight:1.4, whiteSpace:"normal", wordBreak:"break-word" }}>
+                            {info}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </td>
