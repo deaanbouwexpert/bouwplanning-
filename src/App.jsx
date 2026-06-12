@@ -704,16 +704,21 @@ function DatumPicker({ label, value, onChange }) {
 
 // ── TEAM EDIT INLINE (in ProjectRow) ─────────────────────────────────
 function TeamEditInline({ p, onSave, onClose }) {
-  const [leider,     setLeider]     = useState(p.leider||"");
-  const [collega,    setCollega]    = useState(p.collega||"");
-  const [weken,      setWeken]      = useState(String(p.weken||p.duur||"4"));
-  const [startdatum, setStartdatum] = useState(p.date||"");
-  const [oplevering] = useState(p.oplevering||""); // kept for backward compat
-  const [type,       setType]       = useState(p.type||"");
-  const [saving,     setSaving]     = useState(false);
-  const [saved,      setSaved]      = useState(false);
+  const [naam,        setNaam]       = useState(p.name||"");
+  const [leider,      setLeider]     = useState(p.leider||"");
+  const [collega,     setCollega]    = useState(p.collega||"");
+  const [weken,       setWeken]      = useState(String(p.weken||"4"));
+  const [startdatum,  setStartdatum] = useState(p.date||"");
+  const [type,        setType]       = useState(p.type||"");
+  const [ingemeten,   setIngemeten]  = useState(p.ingemeten||false);
+  const [ingemetenDatum, setIngemetenDatum] = useState(p.ingemetenDatum||"");
+  const [actief,      setActief]     = useState(p.actief || COLUMNS.reduce((a,c)=>({...a,[c]:true}),{}));
+  const [klantNaam,   setKlantNaam]  = useState(p.klantNaam||"");
+  const [klantTel,    setKlantTel]   = useState(p.klantTel||"");
+  const [tab,         setTab]        = useState("algemeen");
+  const [saving,      setSaving]     = useState(false);
+  const [saved,       setSaved]      = useState(false);
 
-  // Live preview: bereken einddatum op basis van startdatum + weken
   function berekenEind() {
     if (!startdatum) return null;
     const m = startdatum.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
@@ -726,63 +731,168 @@ function TeamEditInline({ p, onSave, onClose }) {
 
   async function save() {
     setSaving(true);
-    await onSave({ leider, collega, weken, date: startdatum, oplevering, type });
+    await onSave({ name: naam, leider, collega, weken, date: startdatum, type,
+      ingemeten, ingemetenDatum, actief, klantNaam, klantTel });
     setSaving(false);
     setSaved(true);
     setTimeout(() => { setSaved(false); onClose(); }, 900);
   }
 
+  const tabStyle = (t) => ({
+    flex:1, padding:"6px 4px", border:"none", borderRadius:"5px 5px 0 0",
+    fontWeight: tab===t ? 700 : 500, fontSize:11, cursor:"pointer",
+    background: tab===t ? "#fff" : "#E3F0FB",
+    color: tab===t ? "#E65100" : "#546E7A",
+    borderBottom: tab===t ? "2px solid #E65100" : "2px solid transparent",
+  });
+
+  const sectionLabel = (txt) => (
+    <div style={{ fontSize:10, fontWeight:700, color:"#90A4AE", textTransform:"uppercase",
+      letterSpacing:.6, margin:"10px 0 5px" }}>{txt}</div>
+  );
+
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:4,
-      background:"#F0F8FF", borderRadius:7, padding:"10px",
-      border:"2px solid #90CAF9" }}>
+    <div style={{ display:"flex", flexDirection:"column", marginTop:4,
+      background:"#fff", borderRadius:8, border:"2px solid #90CAF9",
+      boxShadow:"0 4px 20px rgba(0,0,0,.12)", minWidth:240, maxWidth:280 }}>
 
-      <DatumPicker label="📅 Startdatum" value={startdatum} onChange={setStartdatum} />
-
-      {/* Weken + automatische einddatum */}
-      <div>
-        <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>
-          ⏱ Aantal weken werk
-        </label>
-        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <input
-            type="number" min="1" max="52" value={weken}
-            onChange={e=>setWeken(e.target.value)}
-            style={{ fontSize:12, padding:"5px 8px", borderRadius:4, border:"2px solid #90CAF9",
-              width:70, outline:"none", fontWeight:700, textAlign:"center" }} />
-          <span style={{ fontSize:11, color:"#90A4AE" }}>weken</span>
-        </div>
-        {einddatum && (
-          <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:6 }}>
-            <span style={{ fontSize:11, color:"#546E7A" }}>🚚 Datum levering:</span>
-            <span style={{ fontSize:12, background:"#E8F5E9", color:"#2E7D32",
-              border:"1px solid #A5D6A7", borderRadius:4, padding:"3px 10px", fontWeight:700 }}>
-              {einddatum}
-            </span>
-          </div>
-        )}
+      {/* Tabs */}
+      <div style={{ display:"flex", background:"#E3F0FB", borderRadius:"6px 6px 0 0", padding:"4px 4px 0" }}>
+        {[["algemeen","📋 Algemeen"],["onderdelen","🔩 Onderdelen"],["klant","👤 Klant"]].map(([k,l])=>(
+          <button key={k} onClick={()=>setTab(k)} style={tabStyle(k)}>{l}</button>
+        ))}
       </div>
 
-      <MedewerkerSelect label="👷 Projectleider" value={leider} onChange={setLeider} />
-      <MedewerkerSelect label="👷 Collega" value={collega} onChange={setCollega} />
+      <div style={{ padding:"10px", display:"flex", flexDirection:"column", gap:6 }}>
 
-      <select value={type} onChange={e=>setType(e.target.value)}
-        style={{ fontSize:11, padding:"5px 7px", borderRadius:4, border:"1px solid #CE93D8", width:"100%", background:"#fff" }}>
-        <option value="">— Type project —</option>
-        {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
-      </select>
+        {/* ── TAB: ALGEMEEN ── */}
+        {tab==="algemeen" && <>
+          {sectionLabel("Projectnaam")}
+          <input value={naam} onChange={e=>setNaam(e.target.value)}
+            style={{ fontSize:12, padding:"6px 8px", borderRadius:5, border:"1px solid #CFD8DC",
+              outline:"none", fontWeight:700, width:"100%", boxSizing:"border-box" }} />
 
-      <div style={{ display:"flex", gap:6 }}>
-        <button onClick={save} disabled={saving||saved}
-          style={{ flex:1, fontSize:12, fontWeight:800, border:"none", borderRadius:5, padding:"8px",
-            cursor: saving||saved ? "default" : "pointer",
-            background: saved ? "#2E7D32" : saving ? "#FF8A65" : "#E65100",
-            color:"#fff", transition:"background .2s" }}>
-          {saved ? "✓ Opgeslagen!" : saving ? "Opslaan..." : "✓ Opslaan"}
-        </button>
-        <button onClick={onClose}
-          style={{ fontSize:11, background:"#F5F7FA", color:"#546E7A", border:"1px solid #DDE3E9",
-            borderRadius:5, padding:"8px 10px", cursor:"pointer" }}>Annuleer</button>
+          {sectionLabel("Planning")}
+          <DatumPicker label="📅 Startdatum" value={startdatum} onChange={setStartdatum} />
+          <div>
+            <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>⏱ Weken werk</label>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <input type="number" min="1" max="52" value={weken} onChange={e=>setWeken(e.target.value)}
+                style={{ fontSize:12, padding:"5px 8px", borderRadius:4, border:"2px solid #90CAF9",
+                  width:65, outline:"none", fontWeight:700, textAlign:"center" }} />
+              <span style={{ fontSize:11, color:"#90A4AE" }}>weken</span>
+            </div>
+            {einddatum && (
+              <div style={{ marginTop:5, display:"flex", alignItems:"center", gap:5 }}>
+                <span style={{ fontSize:10, color:"#546E7A" }}>🚚 Oplevering:</span>
+                <span style={{ fontSize:11, background:"#E8F5E9", color:"#2E7D32",
+                  border:"1px solid #A5D6A7", borderRadius:4, padding:"2px 8px", fontWeight:700 }}>
+                  {einddatum}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {sectionLabel("Inmeten")}
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <button onClick={()=>setIngemeten(v=>!v)}
+              style={{ width:22, height:22, borderRadius:4, border: ingemeten?"none":"2px solid #BDBDBD",
+                background: ingemeten?"#2E7D32":"#fff", cursor:"pointer", display:"flex",
+                alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13, fontWeight:900, flexShrink:0 }}>
+              {ingemeten?"✓":""}
+            </button>
+            <span style={{ fontSize:12, color:"#1C2B3A", fontWeight:600 }}>
+              {ingemeten ? "Ingemeten ✓" : "Nog niet ingemeten"}
+            </span>
+          </div>
+          {ingemeten && (
+            <DatumPicker label="📅 Datum inmeten" value={ingemetenDatum} onChange={setIngemetenDatum} />
+          )}
+
+          {sectionLabel("Team")}
+          <MedewerkerSelect label="👷 Projectleider" value={leider} onChange={setLeider} />
+          <MedewerkerSelect label="👷 Collega" value={collega} onChange={setCollega} />
+
+          {sectionLabel("Type")}
+          <select value={type} onChange={e=>setType(e.target.value)}
+            style={{ fontSize:11, padding:"5px 7px", borderRadius:4, border:"1px solid #CE93D8",
+              width:"100%", background:"#fff" }}>
+            <option value="">— Type project —</option>
+            {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
+          </select>
+        </>}
+
+        {/* ── TAB: ONDERDELEN ── */}
+        {tab==="onderdelen" && <>
+          {sectionLabel("Vink aan welke onderdelen van toepassing zijn")}
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+            <button onClick={()=>setActief(COLUMNS.reduce((a,c)=>({...a,[c]:true}),{}))}
+              style={{ fontSize:10, background:"#E8F5E9", color:"#2E7D32", border:"1px solid #A5D6A7",
+                borderRadius:4, padding:"2px 8px", cursor:"pointer", fontWeight:600 }}>Alles aan</button>
+            <button onClick={()=>setActief(COLUMNS.reduce((a,c)=>({...a,[c]:false}),{}))}
+              style={{ fontSize:10, background:"#FFEBEE", color:"#B71C1C", border:"1px solid #EF9A9A",
+                borderRadius:4, padding:"2px 8px", cursor:"pointer", fontWeight:600 }}>Alles uit</button>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:3, maxHeight:300, overflowY:"auto" }}>
+            {COLUMNS.map((col, ci) => {
+              const aan = actief[col] !== false;
+              return (
+                <div key={col} onClick={()=>setActief(a=>({...a,[col]:!aan}))}
+                  style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 8px",
+                    borderRadius:5, cursor:"pointer", background: aan?"#F0F8FF":"#F5F5F5",
+                    border: aan?"1px solid #90CAF9":"1px solid #E0E0E0" }}>
+                  <div style={{ width:18, height:18, borderRadius:3, flexShrink:0,
+                    background: aan?"#1565C0":"#fff", border: aan?"none":"2px solid #BDBDBD",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    color:"#fff", fontSize:11, fontWeight:900 }}>{aan?"✓":""}</div>
+                  <span style={{ fontSize:12, fontWeight: aan?600:400,
+                    color: aan?"#1C2B3A":"#90A4AE" }}>
+                    {["⚙️","📐","🧱","🪟","🏗️","💡","🔨","🏛️","⚡","🌡️","🏠","🏗️","🔲","🪣","🔧","📦","🏗️","🪜"][ci]} {col}
+                  </span>
+                  <span style={{ marginLeft:"auto", fontSize:10, fontWeight:700,
+                    color: aan?"#1565C0":"#BDBDBD" }}>{aan?"AAN":"UIT"}</span>
+                </div>
+              );
+            })}
+          </div>
+        </>}
+
+        {/* ── TAB: KLANT ── */}
+        {tab==="klant" && <>
+          {sectionLabel("Klantgegevens")}
+          <div>
+            <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>👤 Naam klant</label>
+            <input value={klantNaam} onChange={e=>setKlantNaam(e.target.value)} placeholder="Voor- en achternaam"
+              style={{ fontSize:12, padding:"6px 8px", borderRadius:5, border:"1px solid #CFD8DC",
+                outline:"none", width:"100%", boxSizing:"border-box" }} />
+          </div>
+          <div>
+            <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>📞 Telefoonnummer</label>
+            <input value={klantTel} onChange={e=>setKlantTel(e.target.value)} placeholder="06-12345678"
+              type="tel"
+              style={{ fontSize:12, padding:"6px 8px", borderRadius:5, border:"1px solid #CFD8DC",
+                outline:"none", width:"100%", boxSizing:"border-box" }} />
+            {klantTel && (
+              <a href={`tel:${klantTel}`}
+                style={{ display:"inline-block", marginTop:6, fontSize:11, color:"#1565C0",
+                  textDecoration:"none", fontWeight:600 }}>📞 Bel {klantTel}</a>
+            )}
+          </div>
+        </>}
+
+        {/* Opslaan */}
+        <div style={{ display:"flex", gap:6, marginTop:4 }}>
+          <button onClick={save} disabled={saving||saved}
+            style={{ flex:1, fontSize:12, fontWeight:800, border:"none", borderRadius:5, padding:"9px",
+              cursor: saving||saved ? "default" : "pointer",
+              background: saved?"#2E7D32": saving?"#FF8A65":"#E65100",
+              color:"#fff", transition:"background .2s" }}>
+            {saved ? "✓ Opgeslagen!" : saving ? "Opslaan..." : "✓ Opslaan"}
+          </button>
+          <button onClick={onClose}
+            style={{ fontSize:11, background:"#F5F7FA", color:"#546E7A", border:"1px solid #DDE3E9",
+              borderRadius:5, padding:"9px 12px", cursor:"pointer" }}>✕</button>
+        </div>
       </div>
     </div>
   );
@@ -999,33 +1109,13 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
               {p.afgerond ? "✓" : ""}
             </button>
             <div style={{ flex:1 }}>
-              {editName === p.id ? (
-                <input
-                  defaultValue={p.name}
-                  autoFocus
-                  onKeyDown={e => {
-                    if (e.key === "Enter") updateName(p.id, e.target.value);
-                    if (e.key === "Escape") setEditName(null);
-                  }}
-                  onBlur={e => updateName(p.id, e.target.value)}
-                  style={{ fontWeight:800, fontSize:12, width:"100%",
-                    boxSizing:"border-box", padding:"2px 6px",
-                    borderRadius:4, border:"2px solid #E65100",
-                    outline:"none", color:"#1C2B3A" }}
-                />
-              ) : (
-                <div
-                  onClick={()=>canEdit && !p.afgerond && setEditName(p.id)}
-                  title={canEdit ? "Klik om naam te wijzigen" : ""}
-                  style={{ fontWeight:800, fontSize:12,
-                    color: p.afgerond ? "#90A4AE" : "#1C2B3A",
-                    textDecoration: p.afgerond ? "line-through" : "none",
-                    cursor: canEdit && !p.afgerond ? "text" : "default",
-                    borderBottom: canEdit && !p.afgerond ? "1px dashed #BDBDBD" : "none",
-                    display:"inline-block" }}>
-                  {p.name}
-                </div>
-              )}
+              {/* Project naam */}
+              <div style={{ fontWeight:800, fontSize:12,
+                color: p.afgerond ? "#90A4AE" : "#1C2B3A",
+                textDecoration: p.afgerond ? "line-through" : "none" }}>
+                {p.name}
+              </div>
+              {/* Type badge */}
               {p.type && (() => {
                 const t = PROJECT_TYPES.find(t=>t.label===p.type);
                 return t ? (
@@ -1036,10 +1126,21 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                   </span>
                 ) : null;
               })()}
-              <div style={{ fontSize:10, color:"#90A4AE", marginBottom:3 }}>
-                {p.date}{p.duur ? " · "+p.duur : ""}
+              {/* Datum + ingemeten badge */}
+              <div style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap", marginBottom:2 }}>
+                <span style={{ fontSize:10, color:"#90A4AE" }}>{p.date}</span>
+                {p.ingemeten
+                  ? <span style={{ fontSize:9, fontWeight:700, background:"#E8F5E9", color:"#2E7D32",
+                      border:"1px solid #A5D6A7", borderRadius:3, padding:"1px 5px" }}>
+                      ✓ Ingemeten{p.ingemetenDatum ? " "+p.ingemetenDatum : ""}
+                    </span>
+                  : <span style={{ fontSize:9, fontWeight:600, background:"#FFF3E0", color:"#E65100",
+                      border:"1px solid #FFCC80", borderRadius:3, padding:"1px 5px" }}>
+                      Niet ingemeten
+                    </span>
+                }
               </div>
-
+              {/* Team + klant info */}
               {editTeam===p.id ? (
                 <TeamEditInline p={p} onSave={(fields)=>{ updateTeam(p.id,fields); }} onClose={()=>setEditTeam(null)} />
               ) : (
@@ -1049,28 +1150,33 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                       👷 {p.leider}{p.collega?" & "+p.collega:""}
                     </div>
                   )}
-                  {p.oplevering && (
-                    <div style={{ fontSize:10, color:"#E65100", fontWeight:600 }}>🚚 {p.oplevering}</div>
+                  {p.klantNaam && (
+                    <div style={{ fontSize:10, color:"#546E7A" }}>
+                      👤 {p.klantNaam}{p.klantTel ? " · "+p.klantTel : ""}
+                    </div>
                   )}
                   {canEdit && !p.afgerond && (
                     <button onClick={()=>setEditTeam(p.id)}
                       style={{ marginTop:2, fontSize:10, background:"#F5F7FA",
                         border:"1px solid #DDE3E9", borderRadius:4, padding:"2px 6px",
-                        cursor:"pointer", color:"#546E7A" }}>✏️ Team</button>
+                        cursor:"pointer", color:"#546E7A" }}>✏️ Bewerken</button>
                   )}
                 </div>
               )}
-
             </div>
           </div>
         </td>
         {p.statuses.map((s, ci) => {
           const isOpen = editing?.pid===p.id && editing?.col===ci;
+          const isActief = !p.actief || p.actief[COLUMNS[ci]] !== false;
           return (
             <td key={ci} style={{ ...TD, textAlign:"center", position:"relative",
-              minWidth:88, cursor: canEdit && !p.afgerond ? "pointer" : "default" }}
-              onClick={()=>{ if(canEdit && !p.afgerond && !isOpen) setEditing({pid:p.id,col:ci}); }}>
-              {isOpen ? (
+              minWidth:88, cursor: canEdit && !p.afgerond && isActief ? "pointer" : "default",
+              background: !isActief ? "#F5F5F5" : "inherit", opacity: !isActief ? 0.4 : 1 }}
+              onClick={()=>{ if(canEdit && !p.afgerond && !isOpen && isActief) setEditing({pid:p.id,col:ci}); }}>
+              {!isActief ? (
+                <span style={{ fontSize:10, color:"#BDBDBD", fontWeight:600 }}>—</span>
+              ) : isOpen ? (
                 (() => {
                   // local refs for unsaved uitvoerder text
                   const uitvRef = useRef(null);
