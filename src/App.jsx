@@ -37,6 +37,12 @@ const PROJECT_TYPES = [
   { label:"Renovatie",  bg:"#FFF3E0", text:"#E65100", border:"#FFCC80"  },
 ];
 
+
+const MEDEWERKERS = [
+  "Billy","Bob","Anel","Hicham","Jan","Johnny","Mike","Nick","Pim","Thierry",
+  "Woddy","Jakob","Alec","Aniel","Daan","Dejem","Jair","Kian","Naval",
+  "Richard","Martin 2","Nick 2","Ali",
+];
 const DEFAULT_PROJECTS = [
   // ── JANUARI ──
   { id:1,  name:"Rijsbes 5 Den Haag",               date:"5-01-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
@@ -585,6 +591,157 @@ function MiniCalendar({ value, onChange }) {
   );
 }
 
+// ── MEDEWERKER SELECT ─────────────────────────────────────────────────
+function MedewerkerSelect({ label, value, onChange, border="1px solid #90CAF9" }) {
+  const [custom, setCustom] = useState(!MEDEWERKERS.includes(value) && value !== "");
+  const [customVal, setCustomVal] = useState(!MEDEWERKERS.includes(value) ? value : "");
+
+  function handleSelect(e) {
+    const v = e.target.value;
+    if (v === "__custom__") { setCustom(true); onChange(customVal); }
+    else { setCustom(false); onChange(v); }
+  }
+
+  return (
+    <div>
+      <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>{label}</label>
+      <select
+        value={custom ? "__custom__" : (value || "")}
+        onChange={handleSelect}
+        style={{ fontSize:11, padding:"5px 7px", borderRadius:4, border, width:"100%", background:"#fff", color:"#1C2B3A" }}>
+        <option value="">— Kies naam —</option>
+        {MEDEWERKERS.map(n => <option key={n} value={n}>{n}</option>)}
+        <option value="__custom__">✏️ Andere naam...</option>
+      </select>
+      {custom && (
+        <input
+          autoFocus
+          value={customVal}
+          onChange={e=>{ setCustomVal(e.target.value); onChange(e.target.value); }}
+          placeholder="Typ naam..."
+          style={{ marginTop:4, fontSize:11, padding:"5px 7px", borderRadius:4, border, width:"100%", outline:"none", boxSizing:"border-box" }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── DATUM PICKER FIELD ────────────────────────────────────────────────
+function DatumPicker({ label, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position:"relative" }}>
+      <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>{label}</label>
+      <div onClick={()=>setOpen(v=>!v)}
+        style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 9px", borderRadius:5,
+          border:"1px solid #CFD8DC", background:"#fff", cursor:"pointer", fontSize:12,
+          color: value ? "#1C2B3A" : "#90A4AE", minWidth:130 }}>
+        <span>📅</span>
+        <span>{value || "Kies datum"}</span>
+        {value && <button onClick={e=>{ e.stopPropagation(); onChange(""); setOpen(false); }}
+          style={{ marginLeft:"auto", background:"none", border:"none", cursor:"pointer", color:"#90A4AE", fontSize:13, lineHeight:1 }}>×</button>}
+      </div>
+      {open && (
+        <div style={{ position:"absolute", top:"100%", left:0, zIndex:200, marginTop:2 }}>
+          <MiniCalendar value={value} onChange={v=>{ onChange(v); setOpen(false); }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── TEAM EDIT INLINE (in ProjectRow) ─────────────────────────────────
+function TeamEditInline({ p, onSave, onClose }) {
+  const [leider,     setLeider]     = useState(p.leider||"");
+  const [collega,    setCollega]    = useState(p.collega||"");
+  const [duur,       setDuur]       = useState(p.duur||"");
+  const [oplevering, setOplevering] = useState(p.oplevering||"");
+  const [type,       setType]       = useState(p.type||"");
+
+  function save() {
+    onSave("leider",     leider);
+    onSave("collega",    collega);
+    onSave("duur",       duur);
+    onSave("oplevering", oplevering);
+    onSave("type",       type);
+    onClose();
+  }
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:5, marginTop:4,
+      background:"#F0F8FF", borderRadius:7, padding:"8px 8px",
+      border:"1px solid #90CAF9" }}>
+      <MedewerkerSelect label="👷 Projectleider" value={leider} onChange={setLeider} />
+      <MedewerkerSelect label="👷 Collega" value={collega} onChange={setCollega} />
+      <div>
+        <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>📅 Duur</label>
+        <input value={duur} onChange={e=>setDuur(e.target.value)} placeholder="bv. 6 weken"
+          style={{ fontSize:11, padding:"5px 7px", borderRadius:4, border:"1px solid #90CAF9", width:"100%", outline:"none", boxSizing:"border-box" }} />
+      </div>
+      <DatumPicker label="🚚 Datum levering" value={oplevering} onChange={setOplevering} />
+      <select value={type} onChange={e=>setType(e.target.value)}
+        style={{ fontSize:11, padding:"5px 7px", borderRadius:4, border:"1px solid #CE93D8", width:"100%", background:"#fff" }}>
+        <option value="">— Type project —</option>
+        {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
+      </select>
+      <button onClick={save}
+        style={{ fontSize:11, background:"#E65100", color:"#fff", border:"none",
+          borderRadius:5, padding:"5px 8px", cursor:"pointer", fontWeight:700 }}>✓ Opslaan</button>
+    </div>
+  );
+}
+
+// ── NIEUW PROJECT FORM ────────────────────────────────────────────────
+function NieuwProjectForm({ onSave, onCancel }) {
+  const [name,       setName]       = useState("");
+  const [date,       setDate]       = useState("");
+  const [leider,     setLeider]     = useState("");
+  const [collega,    setCollega]    = useState("");
+  const [duur,       setDuur]       = useState("");
+  const [oplevering, setOplevering] = useState("");
+  const [type,       setType]       = useState("");
+
+  return (
+    <div style={{ background:"#E3F2FD", border:"1px solid #90CAF9", borderRadius:8,
+      padding:"14px 16px", marginBottom:12 }}>
+      <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"flex-end" }}>
+        <div>
+          <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>Projectnaam</label>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Straatnaam + nr"
+            style={{ padding:"7px 10px", borderRadius:5, border:"1px solid #CFD8DC", fontSize:12, width:200, outline:"none" }} />
+        </div>
+        <DatumPicker label="📅 Startdatum" value={date} onChange={setDate} />
+        <div style={{ minWidth:130 }}>
+          <MedewerkerSelect label="👷 Projectleider" value={leider} onChange={setLeider} border="1px solid #CFD8DC" />
+        </div>
+        <div style={{ minWidth:130 }}>
+          <MedewerkerSelect label="👷 Collega" value={collega} onChange={setCollega} border="1px solid #CFD8DC" />
+        </div>
+        <div>
+          <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>📅 Duur</label>
+          <input value={duur} onChange={e=>setDuur(e.target.value)} placeholder="bv. 6 weken"
+            style={{ padding:"7px 10px", borderRadius:5, border:"1px solid #CFD8DC", fontSize:12, width:100, outline:"none" }} />
+        </div>
+        <DatumPicker label="🚚 Datum levering" value={oplevering} onChange={setOplevering} />
+        <div>
+          <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>🏗️ Type</label>
+          <select value={type} onChange={e=>setType(e.target.value)}
+            style={{ padding:"7px 10px", borderRadius:5, border:"1px solid #CFD8DC", fontSize:12, width:130, background:"#fff" }}>
+            <option value="">— Kies type —</option>
+            {PROJECT_TYPES.map(t => <option key={t.label} value={t.label}>{t.label}</option>)}
+          </select>
+        </div>
+        <button onClick={()=>onSave({ name, date, leider, collega, duur, oplevering, type })}
+          style={{ padding:"9px 18px", borderRadius:6, border:"none", background:"#E65100",
+            color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer" }}>Opslaan</button>
+        <button onClick={onCancel}
+          style={{ padding:"9px 18px", borderRadius:6, border:"1px solid #90A4AE",
+            background:"transparent", color:"#546E7A", fontWeight:700, fontSize:13, cursor:"pointer" }}>Annuleer</button>
+      </div>
+    </div>
+  );
+}
+
 // ── CHECKLIST ─────────────────────────────────────────────────────────
 function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, clearHighlight }) {
   const [editing,   setEditing]   = useState(null);
@@ -592,13 +749,7 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
   const [filter,    setFilter]    = useState("");
   const [openMonth, setOpenMonth] = useState(null);
   const [newProj,   setNewProj]   = useState(false);
-  const [npName,    setNpName]    = useState("");
-  const [npDate,    setNpDate]    = useState("");
-  const [npLeider,  setNpLeider]  = useState("");
-  const [npCollega, setNpCollega] = useState("");
-  const [npDuur,    setNpDuur]    = useState("");
-  const [npOplevering, setNpOplevering] = useState("");
-  const [npType,      setNpType]      = useState("");
+
   const [editTeam,  setEditTeam]  = useState(null);
   const [editName,  setEditName]  = useState(null); // pid being name-edited
   const [filterType, setFilterType] = useState("");
@@ -666,15 +817,6 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
     await addLog({ type: was ? "project_heropen" : "project_afgerond", project: proj?.name });
   }
 
-  async function addProject() {
-    if (!npName.trim()) return;
-    const id = Math.max(...projects.map(p=>p.id), 0) + 1;
-    const updated = [...projects, { id, name:npName, date:npDate, einddatum:"", type:npType, leider:npLeider, collega:npCollega, duur:npDuur, oplevering:npOplevering, afgerond:false, statuses:Array(COLUMNS.length).fill("") }];
-    setProjects(updated);
-    await saveData("bouw_projects", updated);
-    await addLog({ type:"project_add", project: npName, datum: npDate });
-    setNpName(""); setNpDate(""); setNpLeider(""); setNpCollega(""); setNpDuur(""); setNpOplevering(""); setNpType(""); setNewProj(false);
-  }
 
   async function updateTeam(pid, field, val) {
     const updated = projects.map(p => p.id===pid ? { ...p, [field]: val } : p);
@@ -793,29 +935,9 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
               <div style={{ fontSize:10, color:"#90A4AE", marginBottom:3 }}>
                 {p.date}{p.duur ? " · "+p.duur : ""}
               </div>
+
               {editTeam===p.id ? (
-                <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                  <input defaultValue={p.leider} placeholder="👷 Projectleider"
-                    onBlur={e=>updateTeam(p.id,"leider",e.target.value)}
-                    style={{ fontSize:11, padding:"3px 6px", borderRadius:4, border:"1px solid #90CAF9", width:"100%" }} />
-                  <input defaultValue={p.collega} placeholder="👷 Collega"
-                    onBlur={e=>updateTeam(p.id,"collega",e.target.value)}
-                    style={{ fontSize:11, padding:"3px 6px", borderRadius:4, border:"1px solid #90CAF9", width:"100%" }} />
-                  <input defaultValue={p.duur} placeholder="📅 Duur"
-                    onBlur={e=>updateTeam(p.id,"duur",e.target.value)}
-                    style={{ fontSize:11, padding:"3px 6px", borderRadius:4, border:"1px solid #90CAF9", width:"100%" }} />
-                  <input defaultValue={p.oplevering} placeholder="🚚 Datum levering"
-                    onBlur={e=>updateTeam(p.id,"oplevering",e.target.value)}
-                    style={{ fontSize:11, padding:"3px 6px", borderRadius:4, border:"1px solid #FFB74D", width:"100%" }} />
-                  <select defaultValue={p.type||""} onChange={e=>updateTeam(p.id,"type",e.target.value)}
-                    style={{ fontSize:11, padding:"3px 6px", borderRadius:4, border:"1px solid #CE93D8", width:"100%", background:"#fff" }}>
-                    <option value="">— Type project —</option>
-                    {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
-                  </select>
-                  <button onClick={()=>setEditTeam(null)}
-                    style={{ fontSize:10, background:"#E65100", color:"#fff", border:"none",
-                      borderRadius:4, padding:"3px 8px", cursor:"pointer", fontWeight:700 }}>✓ Klaar</button>
-                </div>
+                <TeamEditInline p={p} onSave={(field,val)=>{ updateTeam(p.id,field,val); }} onClose={()=>setEditTeam(null)} />
               ) : (
                 <div>
                   {(p.leider||p.collega) && (
@@ -834,6 +956,7 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                   )}
                 </div>
               )}
+
             </div>
           </div>
         </td>
@@ -1130,34 +1253,18 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
 
       {/* ── NIEUW PROJECT FORM ── */}
       {newProj && canEdit && (
-        <div style={{ background:"#E3F2FD", border:"1px solid #90CAF9", borderRadius:8,
-          padding:"12px 16px", marginBottom:12, display:"flex", gap:8, flexWrap:"wrap", alignItems:"flex-end" }}>
-          {[
-            ["Projectnaam", npName, setNpName, "Straatnaam + nr", 180],
-            ["Startdatum", npDate, setNpDate, "bv. 15-07-2026", 120],
-            ["👷 Projectleider", npLeider, setNpLeider, "Naam leider", 130],
-            ["👷 Collega", npCollega, setNpCollega, "Naam collega", 130],
-            ["📅 Duur", npDuur, setNpDuur, "bv. 6 weken", 100],
-            ["🚚 Datum levering", npOplevering, setNpOplevering, "bv. 30-07-2026", 120],
-          ].map(([lbl,val,fn,ph,w]) => (
-            <div key={lbl}>
-              <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>{lbl}</label>
-              <input value={val} onChange={e=>fn(e.target.value)} placeholder={ph}
-                style={{ padding:"7px 10px", borderRadius:5, border:"1px solid #CFD8DC", fontSize:12, width:w, outline:"none" }} />
-            </div>
-          ))}
-          <div>
-            <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>🏗️ Type project</label>
-            <select value={npType} onChange={e=>setNpType(e.target.value)}
-              style={{ padding:"7px 10px", borderRadius:5, border:"1px solid #CFD8DC",
-                fontSize:12, width:130, background:"#fff" }}>
-              <option value="">— Kies type —</option>
-              {PROJECT_TYPES.map(t => <option key={t.label} value={t.label}>{t.label}</option>)}
-            </select>
-          </div>
-          <Btn onClick={addProject}>Opslaan</Btn>
-          <Btn variant="ghost" onClick={()=>setNewProj(false)}>Annuleer</Btn>
-        </div>
+        <NieuwProjectForm
+          onSave={({ name, date, leider, collega, duur, oplevering, type }) => {
+            if (!name.trim()) return;
+            const id = Math.max(...projects.map(p=>p.id), 0) + 1;
+            const updated = [...projects, { id, name, date, einddatum:"", type, leider, collega, duur, oplevering, afgerond:false, statuses:Array(COLUMNS.length).fill("") }];
+            setProjects(updated);
+            saveData("bouw_projects", updated);
+            addLog({ type:"project_add", project: name, datum: date });
+            setNewProj(false);
+          }}
+          onCancel={() => setNewProj(false)}
+        />
       )}
 
       {/* ── LEGEND ── */}
