@@ -43,17 +43,17 @@ const DEFAULT_PROJECTS = [
   { id:2,  name:"Wittenburgerweg 36 Wassenaar",      date:"5-01-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Fundering", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:3,  name:"Waldeck Pyrmontlaan 11 Rijswijk",   date:"5-01-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:4,  name:"Bergsemaas 18 Pijnacker",           date:"12-01-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
-  { id:5,  name:"Oude Middenweg 50 Den Haag",        date:"19-01-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
-  { id:6,  name:"Albert Schweitzerlaan 167 Den Haag",date:"26-01-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:5,  name:"Oude Middenweg 50 Den Haag",        date:"19-01-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:6,  name:"Albert Schweitzerlaan 167 Den Haag",date:"26-01-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   // ── FEBRUARI ──
   { id:7,  name:"Hof van Delftstraat 29 Den Hoorn",  date:"2-02-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:8,  name:"Oostmeerlaan 138 Berkel en Rodenrijs",date:"3-02-2026",duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:9,  name:"Brielsemeer 22 Zoetermeer",         date:"9-02-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:10, name:"Brielsemeer 24 Zoetermeer",         date:"9-02-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:11, name:"Olgaland 17 Den Haag",              date:"9-02-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakkapel", type:"Dakkapel", statuses:Array(18).fill("") },
-  { id:12, name:"Mahatma Gandhisingel 70 Zoetermeer",date:"23-02-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:12, name:"Mahatma Gandhisingel 70 Zoetermeer",date:"23-02-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   // ── MAART ──
-  { id:13, name:"Herderslaan 74 Den Haag",           date:"3-03-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakuitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:13, name:"Herderslaan 74 Den Haag",           date:"3-03-2026",  duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakuitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   { id:14, name:"Pinaskade 60 Zoetermeer (Dakkapel)", date:"9-03-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakkapel", type:"Dakkapel", statuses:Array(18).fill("") },
   { id:15, name:"Pinaskade 60 Zoetermeer (Aanbouw)", date:"9-03-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Dakkapel", statuses:Array(18).fill("") },
   { id:16, name:"Wittenburgerweg 36 Wassenaar (Aanbouw)",date:"9-03-2026",duur:"",leider:"",collega:"",oplevering:"",statuses:Array(18).fill("") },
@@ -62,9 +62,9 @@ const DEFAULT_PROJECTS = [
   // ── APRIL ──
   { id:19, name:"Linzenakker 27 Schiedam",           date:"1-04-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:20, name:"Anna Ruyschstraat 32 Zoetermeer",   date:"13-04-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouwserre", type:"Aanbouw", statuses:Array(18).fill("") },
-  { id:21, name:"Zeedistel 5 Nootdorp",              date:"20-04-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakuitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
-  { id:22, name:"Laakkade 377 Den Haag",             date:"28-04-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
-  { id:23, name:"Handelskade 81 Nieuwegein",         date:"29-04-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:21, name:"Zeedistel 5 Nootdorp",              date:"20-04-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakuitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:22, name:"Laakkade 377 Den Haag",             date:"28-04-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:23, name:"Handelskade 81 Nieuwegein",         date:"29-04-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   // ── MEI ──
   { id:24, name:"Soesterbergstraat 160 Den Haag",    date:"4-05-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:25, name:"Porfier 6 Zoetermeer",              date:"4-05-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
@@ -74,15 +74,15 @@ const DEFAULT_PROJECTS = [
   // ── JUNI ──
   { id:29, name:"Theeroos 55 Rotterdam",             date:"8-06-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:30, name:"Achter Porfier 6 Zoetermeer",       date:"15-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
-  { id:31, name:"Lingestraat 153 Berkel en Rodenrijs",date:"15-06-2026",duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:31, name:"Lingestraat 153 Berkel en Rodenrijs",date:"15-06-2026",duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   { id:32, name:"Marter 34 Hellevoetsluis",          date:"22-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
-  { id:33, name:"Bizet 10 Naaldwijk",                date:"22-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:33, name:"Bizet 10 Naaldwijk",                date:"22-06-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   { id:34, name:"Cyclaamtuin 25 Pijnacker",          date:"23-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:35, name:"Lobelialaan 22 Den Haag",           date:"25-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:87, name:"Stephensonstraat 46 Den Haag", date:"29-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Serre", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:36, name:"Van der Helmstraat 16 Rotterdam",   date:"29-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   // ── JULI ──
-  { id:37, name:"Oosterschelde 204 Zoetermeer",      date:"1-07-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:37, name:"Oosterschelde 204 Zoetermeer",      date:"1-07-2026",  duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   { id:38, name:"Mozartlaan 42 Leidschendam",        date:"6-07-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:39, name:"Watersnip 12 Berkel en Rodenrijs",  date:"6-07-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:40, name:"Truus Wijsmullerstraat 32 Pijnacker",date:"7-07-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
@@ -90,23 +90,23 @@ const DEFAULT_PROJECTS = [
   { id:42, name:"Vrouwenrecht 4 Pijnacker",          date:"20-07-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:43, name:"Ertsstraat 44 Rotterdam",           date:"22-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   // ── AUGUSTUS ──
-  { id:44, name:"Munthof 12 Voorhout",               date:"24-08-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakuitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:44, name:"Munthof 12 Voorhout",               date:"24-08-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakuitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   { id:45, name:"Watervliet 87 Hoofddorp",           date:"25-08-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:46, name:"Anjelier 4 Rijswijk",               date:"31-08-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
-  { id:47, name:"Burg Knappertlaan 231B Schiedam",   date:"31-08-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dubbele Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:47, name:"Burg Knappertlaan 231B Schiedam",   date:"31-08-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dubbele Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   // ── SEPTEMBER ──
   { id:48, name:"Pearl Bucklaan 17 Den Haag",        date:"7-09-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:49, name:"Louis d'Orlaan 1 Berkel en Rodenrijs",date:"14-09-2026",duur:"",leider:"",collega:"",oplevering:"",statuses:Array(18).fill("") },
-  { id:50, name:"Stuyvesantplein 4 Den Haag",        date:"14-09-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:50, name:"Stuyvesantplein 4 Den Haag",        date:"14-09-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   { id:51, name:"Spiegelkarpersingel 2 Den Haag",    date:"21-09-26", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:52, name:"Veluwemeerplantsoen 50 Berkel en Rodenrijs",date:"22-09-2026",duur:"",leider:"",collega:"",oplevering:"",statuses:Array(18).fill("") },
-  { id:53, name:"Cypresgroen 43 Zoetermeer",         date:"21-09-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
-  { id:54, name:"Waldeck Pyrmontstraat 5 Zoetermeer",date:"99-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakuitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
-  { id:55, name:"Waldeck Pyrmontstraat 7 Zoetermeer",date:"9-09-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakuitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:53, name:"Cypresgroen 43 Zoetermeer",         date:"21-09-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:54, name:"Waldeck Pyrmontstraat 5 Zoetermeer",date:"99-2026",  duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakuitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:55, name:"Waldeck Pyrmontstraat 7 Zoetermeer",date:"9-09-2026",  duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakuitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   { id:56, name:"Breitnerlaan 126 Den Haag",         date:"14-09-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   // ── OKTOBER ──
   { id:57, name:"Bromelia 2 Nootdorp",               date:"5-10-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
-  { id:58, name:"Gagelplein 62 Den Haag",            date:"6-10-2026",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:58, name:"Gagelplein 62 Den Haag",            date:"6-10-2026",  duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   { id:59, name:"Lamoen 53 Brielle",                 date:"12-10-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:60, name:"Tjaliehof 11 Capelle aan den IJssel",date:"19-10-2026",duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   { id:61, name:"S vd Oyeweg 80 Delfgauw",           date:"20-10-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
@@ -116,13 +116,13 @@ const DEFAULT_PROJECTS = [
   { id:64, name:"Kamvaren 37 Den Haag",              date:"23-11-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Renovatie", type:"Renovatie", statuses:Array(18).fill("") },
   { id:65, name:"Anjelier 13 Rijswijk",              date:"30-11-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
   // ── DECEMBER ──
-  { id:66, name:"Wijnberg 21 Zoetermeer",            date:"28-09-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
-  { id:67, name:"Wijnberg 22 Zoetermeer",            date:"28-09-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
-  { id:68, name:"Wieldraaier 4 Delfgauw",            date:"26-05-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:66, name:"Wijnberg 21 Zoetermeer",            date:"28-09-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:67, name:"Wijnberg 22 Zoetermeer",            date:"28-09-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:68, name:"Wieldraaier 4 Delfgauw",            date:"26-05-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   // ── WHITEBOARD MEI-JUNI 2026 (bestaande projecten) ──
   { id:75, name:"Serjanbeek 100", date:"4-05-2026", duur:"", leider:"Rob", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:["Geleverd", "Geleverd", "Meergagrijs", "Geleverd", "Besteld", "", "Besteld", "Gereed", "", "Aangevraagd", "Gereed", "×", "Plannen!", "", "Plannen!", "Geleverd", "×", "×"] },
-  { id:76, name:"Bizet 22-06", date:"22-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:["Besteld", "Geleverd", "Geleverd", "Aangevraagd", "×", "×", "×", "×", "Aangevraagd", "", "Plannen!", "Plannen!", "", "Plannen!", "Plannen!", "Plannen!", "", "Aangevraagd"] },
-  { id:77, name:"Lingestraat 15J", date:"15-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:["", "Geleverd", "Besteld", "Herje Bruik", "×", "×", "", "×", "Doet klant", "×", "26-6", "19-6", "Week29", "15 Jun", "15 Jun", "Eben Stetzer", "×", ""] },
+  { id:76, name:"Bizet 22-06", date:"22-06-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:["Besteld", "Geleverd", "Geleverd", "Aangevraagd", "×", "×", "×", "×", "Aangevraagd", "", "Plannen!", "Plannen!", "", "Plannen!", "Plannen!", "Plannen!", "", "Aangevraagd"] },
+  { id:77, name:"Lingestraat 15J", date:"15-06-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:["", "Geleverd", "Besteld", "Herje Bruik", "×", "×", "", "×", "Doet klant", "×", "26-6", "19-6", "Week29", "15 Jun", "15 Jun", "Eben Stetzer", "×", ""] },
   { id:78, name:"Marterstraat 23-06", date:"23-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:["×", "×", "Zandsteen", "Aangevraagd", "Plannen!", "×", "Besteld", "Plannen!", "Doet klant", "Aangevraagd", "Plannen!", "×", "×", "×", "Plannen!", "×", "Plannen!", "Plannen!"] },
   { id:79, name:"Cyclaamstraat 23-06", date:"23-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:["Plannen!", "Aangevraagd", "Plannen!", "Besteld", "Plannen!", "×", "Besteld", "Plannen!", "Plannen!", "Aangevraagd", "Plannen!", "×", "×", "Plannen!", "Plannen!", "Plannen!", "×", "×"] },
   { id:80, name:"Robeliaklaan 25-06", date:"25-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:["×", "×", "Geleverd", "Geleverd", "Herje Bruik", "Geleverd", "Herje Druik", "Herje Druik", "Plannen!", "×", "×", "Plannen!", "", "×", "×", "×", "×", "Plannen!"] },
@@ -133,12 +133,12 @@ const DEFAULT_PROJECTS = [
   { id:85, name:"Lean van Overvlost 1", date:"18-05-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:["Besteld", "Geleverd", "Besteld", "Geleverd", "Besteld", "Geleverd", "Gereed", "Geleverd", "5-6", "×", "×", "Plannen!", "Alleen 8-189", "Gereed", "Geleverd", "×", "×", "×"] },
   { id:86, name:"Thereoos 25-06", date:"25-06-2026", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:["Controle", "Geleverd", "Metsel", "Geleverd", "Besteld", "×", "08-06", "Besteld", "Aangevraagd", "Plannen!", "Plannen!", "Plannen!", "×", "20-6", "Geleverd", "×", "8-6", "×"] },
   // ── 2027 ──
-  { id:69, name:"Hoekerkade 47 Zoetermeer",          date:"1-02-2027",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dubbele Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:69, name:"Hoekerkade 47 Zoetermeer",          date:"1-02-2027",  duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dubbele Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   { id:70, name:"Vroonhoevelaan 49 Den Haag (Herstart)",date:"1-02-2027",duur:"",leider:"",collega:"",oplevering:"",statuses:Array(18).fill("") },
   { id:71, name:"Laan van Eik en Duinen 137 Den Haag",date:"1-03-2027", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
-  { id:72, name:"Hemelsblauw 28 Zoetermeer",         date:"22-03-2027", duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:72, name:"Hemelsblauw 28 Zoetermeer",         date:"22-03-2027", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
   { id:73, name:"Sweelinckplein 77 Den Haag",        date:"1-06-2027",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:Array(18).fill("") },
-  { id:74, name:"Goudenregenstraat 19 Den Haag",     date:"1-06-2027",  duur:"", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Opbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
+  { id:74, name:"Goudenregenstraat 19 Den Haag",     date:"1-06-2027",  duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", afgerond:false, typeLabel:"Opbouw", type:"Dakopbouw", statuses:Array(18).fill("") },
 ];
 
 const YEAR_MONTHS = ["Jan","Feb","Mrt","Apr","Mei","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
@@ -2268,13 +2268,33 @@ const TABS = [
   { key:"logboek",      label:"📝 Logboek" },
 ];
 
+const SESSION_KEY = "bouw_session";
+const SESSION_DAYS = 5;
+
+function saveSession(user) {
+  const expires = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ user, expires }));
+}
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const { user, expires } = JSON.parse(raw);
+    if (Date.now() > expires) { localStorage.removeItem(SESSION_KEY); return null; }
+    return user;
+  } catch { return null; }
+}
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
 export default function App() {
   const [projects,         setProjects]         = useState(null);
   const [logs,             setLogs]             = useState([]);
   const [tab,              setTab]              = useState("checklist");
   const [loading,          setLoading]          = useState(true);
   const [highlightProject, setHighlightProject] = useState(null);
-  const [currentUser,      setCurrentUser]      = useState(null);
+  const [currentUser,      setCurrentUser]      = useState(() => loadSession());
   const [users,            setUsers]            = useState([]);
   const [showAdmin,        setShowAdmin]        = useState(false);
 
@@ -2332,7 +2352,7 @@ export default function App() {
 
   if (!currentUser) return (
     <AuthScreen
-      onLogin={setCurrentUser}
+      onLogin={(user) => { saveSession(user); setCurrentUser(user); }}
       users={users}
       setUsers={setUsers}
     />
@@ -2379,7 +2399,7 @@ export default function App() {
           <div style={{ fontSize:12, color:"#CFD8DC" }}>
             👤 {currentUser.name}
           </div>
-          <button onClick={()=>setCurrentUser(null)}
+          <button onClick={()=>{ clearSession(); setCurrentUser(null); }}
             style={{ background:"rgba(255,255,255,.12)", border:"none", color:"#fff",
               padding:"5px 12px", borderRadius:6, fontWeight:600,
               cursor:"pointer", fontSize:12 }}>
