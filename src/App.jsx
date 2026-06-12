@@ -634,12 +634,11 @@ function MedewerkerSelect({ label, value, onChange, border="1px solid #90CAF9" }
 // ── DATUM PICKER FIELD ────────────────────────────────────────────────
 function DatumPicker({ label, value, onChange }) {
   const [open, setOpen] = useState(false);
-  const [pos,  setPos]  = useRef ? { current: {top:0,left:0} } : { current: {top:0,left:0} };
   const btnRef = useRef(null);
   const [calPos, setCalPos] = useState({ top:0, left:0 });
 
-  function toggle() {
-    if (!open && btnRef.current) {
+  function openCal() {
+    if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
       const calH = 265;
       const spaceBelow = window.innerHeight - r.bottom;
@@ -648,7 +647,7 @@ function DatumPicker({ label, value, onChange }) {
         : (r.bottom + 4 + window.scrollY);
       setCalPos({ top, left: r.left + window.scrollX });
     }
-    setOpen(v => !v);
+    setOpen(true);
   }
 
   useEffect(() => {
@@ -660,20 +659,28 @@ function DatumPicker({ label, value, onChange }) {
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  // Use a portal so the calendar is never clipped by table overflow
   const portalTarget = typeof document !== "undefined" ? document.body : null;
 
   return (
     <div data-datepicker="1" style={{ position:"relative" }}>
       {label && <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>{label}</label>}
-      <div ref={btnRef} onClick={toggle}
+      <div ref={btnRef}
         style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 9px", borderRadius:5,
-          border:"1px solid #CFD8DC", background:"#fff", cursor:"pointer", fontSize:12,
-          color: value ? "#1C2B3A" : "#90A4AE", minWidth:130 }}>
-        <span>📅</span>
-        <span>{value || "Kies datum"}</span>
-        {value && <button onClick={e=>{ e.stopPropagation(); onChange(""); setOpen(false); }}
-          style={{ marginLeft:"auto", background:"none", border:"none", cursor:"pointer", color:"#90A4AE", fontSize:13, lineHeight:1 }}>×</button>}
+          border: open ? "1px solid #E65100" : "1px solid #CFD8DC",
+          background:"#fff", fontSize:12, minWidth:130 }}>
+        <span style={{ cursor:"pointer", flex:1, display:"flex", alignItems:"center", gap:6,
+          color: value ? "#1C2B3A" : "#90A4AE" }}
+          onClick={openCal}>
+          <span>📅</span>
+          <span>{value || "Kies datum"}</span>
+        </span>
+        {value
+          ? <button onClick={e=>{ e.stopPropagation(); onChange(""); setOpen(false); }}
+              title="Datum wissen"
+              style={{ background:"none", border:"none", cursor:"pointer", color:"#90A4AE",
+                fontSize:15, lineHeight:1, padding:"0 2px", flexShrink:0 }}>×</button>
+          : <span style={{ color:"#BDBDBD", fontSize:11, cursor:"pointer" }} onClick={openCal}>▼</span>
+        }
       </div>
       {open && portalTarget && ReactDOM.createPortal(
         <div data-datepicker="1"
@@ -692,39 +699,70 @@ function DatumPicker({ label, value, onChange }) {
 function TeamEditInline({ p, onSave, onClose }) {
   const [leider,     setLeider]     = useState(p.leider||"");
   const [collega,    setCollega]    = useState(p.collega||"");
-  const [duur,       setDuur]       = useState(p.duur||"");
+  const [weken,      setWeken]      = useState(String(p.weken||p.duur||"4"));
   const [startdatum, setStartdatum] = useState(p.date||"");
   const [oplevering, setOplevering] = useState(p.oplevering||"");
   const [type,       setType]       = useState(p.type||"");
   const [saving,     setSaving]     = useState(false);
   const [saved,      setSaved]      = useState(false);
 
+  // Live preview: bereken einddatum op basis van startdatum + weken
+  function berekenEind() {
+    if (!startdatum) return null;
+    const m = startdatum.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+    if (!m) return null;
+    const d = new Date(+m[3], +m[2]-1, +m[1]);
+    d.setDate(d.getDate() + (parseInt(weken)||4) * 7);
+    return `${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}-${d.getFullYear()}`;
+  }
+  const einddatum = berekenEind();
+
   async function save() {
     setSaving(true);
-    await onSave({ leider, collega, duur, date: startdatum, oplevering, type });
+    await onSave({ leider, collega, weken, date: startdatum, oplevering, type });
     setSaving(false);
     setSaved(true);
-    setTimeout(() => { setSaved(false); onClose(); }, 800);
+    setTimeout(() => { setSaved(false); onClose(); }, 900);
   }
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:4,
       background:"#F0F8FF", borderRadius:7, padding:"10px",
       border:"2px solid #90CAF9" }}>
+
       <DatumPicker label="📅 Startdatum" value={startdatum} onChange={setStartdatum} />
+
+      {/* Weken + live einddatum preview */}
+      <div>
+        <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>
+          ⏱ Aantal weken werk
+        </label>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <input
+            type="number" min="1" max="52" value={weken}
+            onChange={e=>setWeken(e.target.value)}
+            style={{ fontSize:12, padding:"5px 8px", borderRadius:4, border:"2px solid #90CAF9",
+              width:70, outline:"none", fontWeight:700, textAlign:"center" }} />
+          <span style={{ fontSize:11, color:"#90A4AE" }}>weken</span>
+          {einddatum && (
+            <span style={{ fontSize:11, background:"#E8F5E9", color:"#2E7D32",
+              border:"1px solid #A5D6A7", borderRadius:4, padding:"2px 8px", fontWeight:600 }}>
+              → {einddatum}
+            </span>
+          )}
+        </div>
+      </div>
+
       <MedewerkerSelect label="👷 Projectleider" value={leider} onChange={setLeider} />
       <MedewerkerSelect label="👷 Collega" value={collega} onChange={setCollega} />
-      <div>
-        <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>📅 Duur</label>
-        <input value={duur} onChange={e=>setDuur(e.target.value)} placeholder="bv. 6 weken"
-          style={{ fontSize:11, padding:"5px 7px", borderRadius:4, border:"1px solid #90CAF9", width:"100%", outline:"none", boxSizing:"border-box" }} />
-      </div>
       <DatumPicker label="🚚 Datum levering" value={oplevering} onChange={setOplevering} />
+
       <select value={type} onChange={e=>setType(e.target.value)}
         style={{ fontSize:11, padding:"5px 7px", borderRadius:4, border:"1px solid #CE93D8", width:"100%", background:"#fff" }}>
         <option value="">— Type project —</option>
         {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
       </select>
+
       <div style={{ display:"flex", gap:6 }}>
         <button onClick={save} disabled={saving||saved}
           style={{ flex:1, fontSize:12, fontWeight:800, border:"none", borderRadius:5, padding:"8px",
