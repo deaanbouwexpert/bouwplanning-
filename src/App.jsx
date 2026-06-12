@@ -835,25 +835,29 @@ function TeamEditInline({ p, onSave, onClose }) {
                 const aan = actief[col] !== false;
                 const hasChildren = !!children;
                 return (
-                  <div style={{ borderBottom:"1px solid #E8EAED", border:"1px solid #E0E0E0", borderRadius:5, margin:2,
+                  <div style={{ border:"1px solid #E0E0E0", borderRadius:5, margin:2,
                     background: aan?"#EBF5FF":"#FAFAFA",
                     gridColumn: (aan && hasChildren) ? "1 / -1" : "auto" }}>
+                    {/* Only the top bar toggles AAN/UIT */}
                     <div onClick={()=>setActief(a=>({...a,[col]:!aan}))}
-                      style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", cursor:"pointer",
+                      style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 8px", cursor:"pointer",
                         userSelect:"none" }}>
-                      <div style={{ width:20, height:20, borderRadius:4, flexShrink:0,
+                      <div style={{ width:18, height:18, borderRadius:3, flexShrink:0,
                         background: aan?"#1565C0":"#fff", border: aan?"2px solid #1565C0":"2px solid #BDBDBD",
                         display:"flex", alignItems:"center", justifyContent:"center",
-                        color:"#fff", fontSize:12, fontWeight:900, transition:"all .15s" }}>{aan?"✓":""}</div>
-                      <span style={{ fontSize:12, fontWeight: aan?600:400, color: aan?"#1C2B3A":"#90A4AE", flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{col}</span>
-                      <span style={{ fontSize:10, fontWeight:700, flexShrink:0,
-                        color: aan?"#fff":"#BDBDBD",
-                        background: aan?"#1565C0":"#E0E0E0",
-                        padding:"2px 7px", borderRadius:20 }}>{aan?"AAN":"UIT"}</span>
+                        color:"#fff", fontSize:11, fontWeight:900, transition:"all .15s" }}>{aan?"✓":""}</div>
+                      <span style={{ fontSize:11, fontWeight: aan?600:400, color: aan?"#1C2B3A":"#90A4AE",
+                        flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{col}</span>
+                      <span style={{ fontSize:9, fontWeight:700, flexShrink:0,
+                        color: aan?"#fff":"#BDBDBD", background: aan?"#1565C0":"#E0E0E0",
+                        padding:"1px 6px", borderRadius:20 }}>{aan?"AAN":"UIT"}</span>
                     </div>
+                    {/* Children area — clicks here do NOT toggle */}
                     {aan && children && (
-                      <div style={{ padding:"4px 10px 10px 38px", display:"flex", flexDirection:"column", gap:7, background:"#F0F7FF", borderTop:"1px solid #DDEEFF" }}
-                        onClick={e=>e.stopPropagation()}>
+                      <div style={{ padding:"6px 10px 10px 10px", display:"flex", flexDirection:"column", gap:6,
+                        background:"#F0F7FF", borderTop:"1px solid #DDEEFF" }}
+                        onClick={e=>e.stopPropagation()}
+                        onMouseDown={e=>e.stopPropagation()}>
                         {children}
                       </div>
                     )}
@@ -862,23 +866,28 @@ function TeamEditInline({ p, onSave, onClose }) {
               }
               function OField({ label, k, placeholder, type="text", unit }) {
                 return (
-                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    {label && <span style={{ fontSize:12, color:"#546E7A", minWidth:90, fontWeight:500 }}>{label}</span>}
-                    <input type={type} value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}
+                    onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}>
+                    {label && <span style={{ fontSize:11, color:"#546E7A", minWidth:70, flexShrink:0 }}>{label}</span>}
+                    <input type={type} value={ond[k]||""} onChange={e=>{ e.stopPropagation(); ondSet(k,e.target.value); }}
+                      onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}
                       placeholder={placeholder}
-                      style={{ flex:1, fontSize:12, padding:"5px 8px", borderRadius:5,
-                        border:"1px solid #CFD8DC", outline:"none", background:"#fff", color:"#1C2B3A" }} />
-                    {unit && <span style={{ fontSize:11, color:"#90A4AE", fontWeight:500 }}>{unit}</span>}
+                      style={{ flex:1, fontSize:11, padding:"4px 7px", borderRadius:4, minWidth:0,
+                        border:"1px solid #CFD8DC", outline:"none", background:"#fff", color:"#1C2B3A",
+                        boxSizing:"border-box" }} />
+                    {unit && <span style={{ fontSize:10, color:"#90A4AE", flexShrink:0 }}>{unit}</span>}
                   </div>
                 );
               }
               function OSelect({ label, k, options }) {
                 return (
-                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    {label && <span style={{ fontSize:12, color:"#546E7A", minWidth:90, fontWeight:500 }}>{label}</span>}
-                    <select value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
-                      style={{ flex:1, fontSize:12, padding:"5px 8px", borderRadius:5,
-                        border:"1px solid #CFD8DC", background:"#fff", color:"#1C2B3A" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}
+                    onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}>
+                    {label && <span style={{ fontSize:11, color:"#546E7A", minWidth:70, flexShrink:0 }}>{label}</span>}
+                    <select value={ond[k]||""} onChange={e=>{ e.stopPropagation(); ondSet(k,e.target.value); }}
+                      onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}
+                      style={{ flex:1, fontSize:11, padding:"4px 7px", borderRadius:4,
+                        border:"1px solid #CFD8DC", background:"#fff", color:"#1C2B3A", minWidth:0 }}>
                       <option value="">— kies —</option>
                       {options.map(o=><option key={o} value={o}>{o}</option>)}
                     </select>
@@ -887,10 +896,11 @@ function TeamEditInline({ p, onSave, onClose }) {
               }
               function ONote({ k }) {
                 return (
-                  <textarea value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
-                    placeholder="Notitie / opmerking..."
+                  <textarea value={ond[k]||""} onChange={e=>{ e.stopPropagation(); ondSet(k,e.target.value); }}
+                    onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}
+                    placeholder="Notitie..."
                     rows={2}
-                    style={{ fontSize:12, padding:"5px 8px", borderRadius:5, border:"1px solid #CFD8DC",
+                    style={{ fontSize:11, padding:"4px 7px", borderRadius:4, border:"1px solid #CFD8DC",
                       outline:"none", resize:"vertical", width:"100%", boxSizing:"border-box", color:"#1C2B3A" }} />
                 );
               }
