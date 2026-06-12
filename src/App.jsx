@@ -708,7 +708,7 @@ function OndRow({ col, aan, onToggle, actief, children }) {
   return (
     <div style={{ border:"1px solid #E0E0E0", borderRadius:5, margin:2,
       background: aan?"#EBF5FF":"#FAFAFA",
-      gridColumn: (aan && hasChildren) ? "1 / -1" : "auto" }}>
+      gridColumn: aan ? "1 / -1" : "auto" }}>
       <div onClick={onToggle}
         style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 8px",
           cursor:"pointer", userSelect:"none" }}>
@@ -724,7 +724,7 @@ function OndRow({ col, aan, onToggle, actief, children }) {
       </div>
       {aan && children && (
         <div style={{ padding:"6px 10px 10px 10px", display:"flex", flexDirection:"column", gap:6,
-          background:"#F0F7FF", borderTop:"1px solid #DDEEFF" }}>
+          background:"#F0F7FF", borderTop:"1px solid #DDEEFF", gridColumn:"1 / -1" }}>
           {children}
         </div>
       )}
@@ -762,10 +762,10 @@ function ONote({ k, ond, ondSet }) {
   return (
     <textarea value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
       placeholder="Notitie..."
-      rows={2}
-      style={{ fontSize:11, padding:"4px 7px", borderRadius:4, border:"1px solid #CFD8DC",
+      rows={4}
+      style={{ fontSize:12, padding:"7px 9px", borderRadius:5, border:"1px solid #90CAF9",
         outline:"none", resize:"vertical", width:"100%", boxSizing:"border-box",
-        color:"#1C2B3A", background:"#fff" }} />
+        color:"#1C2B3A", background:"#fff", lineHeight:1.5, minHeight:72 }} />
   );
 }
 
