@@ -760,12 +760,11 @@ function OSelect({ label, k, options, ond, ondSet }) {
 }
 function ONote({ k, ond, ondSet }) {
   return (
-    <textarea value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
+    <input type="text" value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
       placeholder="Notitie..."
-      rows={4}
-      style={{ fontSize:12, padding:"7px 9px", borderRadius:5, border:"1px solid #90CAF9",
-        outline:"none", resize:"vertical", width:"100%", boxSizing:"border-box",
-        color:"#1C2B3A", background:"#fff", lineHeight:1.5, minHeight:72 }} />
+      style={{ fontSize:12, padding:"5px 8px", borderRadius:5, border:"1px solid #90CAF9",
+        outline:"none", width:"100%", boxSizing:"border-box",
+        color:"#1C2B3A", background:"#fff" }} />
   );
 }
 
