@@ -305,6 +305,27 @@ function AuthScreen({ onLogin, users, setUsers }) {
             <Input label="E-mailadres" type="email" value={email} onChange={setEmail} placeholder="naam@bedrijf.nl" />
             <Input label="Wachtwoord" type="password" value={pass} onChange={setPass} placeholder="••••••••" />
             <Btn style={{ width:"100%", padding:"11px" }} onClick={doLogin}>Inloggen</Btn>
+            <div style={{ textAlign:"center", marginTop:12 }}>
+              <button onClick={async()=>{
+                if (!email.trim()) { setErr("Vul eerst je e-mailadres in."); return; }
+                const u = users.find(u => u.email.toLowerCase()===email.toLowerCase());
+                if (!u && email.toLowerCase()!==ADMIN_USER.email) {
+                  setErr("Dit e-mailadres is niet bekend."); return;
+                }
+                // Send reset email via mailto
+                const resetCode = Math.random().toString(36).slice(2,8).toUpperCase();
+                const subject = encodeURIComponent("BouwPlanning - Wachtwoord reset verzoek");
+                const body = encodeURIComponent(
+                  `Hallo Rob,\n\n${email} vraagt een nieuw wachtwoord aan.\n\nReset code: ${resetCode}\n\nGa naar de app en stel een nieuw wachtwoord in voor deze gebruiker.\n\nBouwPlanning - De Aanbouw Expert`
+                );
+                window.open(`mailto:rob@deaanbouwexpert.nl?subject=${subject}&body=${body}`);
+                setOk("Er wordt een e-mail geopend naar Rob Broekman. Hij stelt een nieuw wachtwoord voor je in.");
+              }}
+                style={{ background:"none", border:"none", cursor:"pointer",
+                  fontSize:12, color:"#1565C0", textDecoration:"underline" }}>
+                Wachtwoord vergeten?
+              </button>
+            </div>
           </>
         ) : (
           <>
@@ -2252,7 +2273,10 @@ export default function App() {
   const [logs,             setLogs]             = useState([]);
   const [tab,              setTab]              = useState("checklist");
   const [loading,          setLoading]          = useState(true);
-  const [highlightProject, setHighlightProject] = useState(null); // pid to scroll to
+  const [highlightProject, setHighlightProject] = useState(null);
+  const [currentUser,      setCurrentUser]      = useState(null);
+  const [users,            setUsers]            = useState([]);
+  const [showAdmin,        setShowAdmin]        = useState(false);
 
   function goToProject(pid) {
     setTab("checklist");
@@ -2278,11 +2302,11 @@ export default function App() {
 
   useEffect(()=>{
     (async()=>{
-      const [savedProjects, savedLogs] = await Promise.all([
+      const [savedProjects, savedLogs, savedUsers] = await Promise.all([
         loadData("bouw_projects", null),
         loadData("bouw_logs", []),
+        loadData("bouw_users", []),
       ]);
-      // If nothing saved yet, write defaults to storage so first save works
       if (!savedProjects) {
         await saveData("bouw_projects", DEFAULT_PROJECTS);
         setProjects(DEFAULT_PROJECTS);
@@ -2290,6 +2314,7 @@ export default function App() {
         setProjects(savedProjects);
       }
       setLogs(savedLogs);
+      setUsers(savedUsers);
       setLoading(false);
     })();
   },[]);
@@ -2303,6 +2328,14 @@ export default function App() {
       <div>De Aanbouw Expert — laden…</div>
       <div style={{ fontSize:12, color:"#78909C" }}>Opgeslagen data wordt opgehaald</div>
     </div>
+  );
+
+  if (!currentUser) return (
+    <AuthScreen
+      onLogin={setCurrentUser}
+      users={users}
+      setUsers={setUsers}
+    />
   );
 
   return (
@@ -2326,10 +2359,49 @@ export default function App() {
           </button>
         ))}
         <div style={{ flex:1 }}/>
-        <span style={{ fontSize:11, color:"#78909C", fontStyle:"italic" }}>
-          🔓 Open toegang — tijdelijk zonder inloggen
-        </span>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          {currentUser.role === "admin" && (
+            <button onClick={()=>setShowAdmin(v=>!v)}
+              style={{ background: showAdmin?"#E65100":"rgba(255,255,255,.12)",
+                border:"none", color:"#fff", padding:"5px 12px", borderRadius:6,
+                fontWeight:700, cursor:"pointer", fontSize:12, position:"relative" }}>
+              👥 Accounts
+              {users.filter(u=>!u.approved).length > 0 && (
+                <span style={{ position:"absolute", top:-6, right:-6,
+                  background:"#FF5722", color:"#fff", borderRadius:"50%",
+                  width:18, height:18, fontSize:10, fontWeight:800,
+                  display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {users.filter(u=>!u.approved).length}
+                </span>
+              )}
+            </button>
+          )}
+          <div style={{ fontSize:12, color:"#CFD8DC" }}>
+            👤 {currentUser.name}
+          </div>
+          <button onClick={()=>setCurrentUser(null)}
+            style={{ background:"rgba(255,255,255,.12)", border:"none", color:"#fff",
+              padding:"5px 12px", borderRadius:6, fontWeight:600,
+              cursor:"pointer", fontSize:12 }}>
+            Uitloggen
+          </button>
+        </div>
       </header>
+
+      {/* Admin panel overlay */}
+      {showAdmin && currentUser.role === "admin" && (
+        <div style={{ background:"#FFF8E1", borderBottom:"2px solid #FFD600",
+          padding:"20px 24px" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+            marginBottom:16 }}>
+            <h3 style={{ margin:0, fontSize:16, color:"#1C2B3A" }}>👥 Accountbeheer</h3>
+            <button onClick={()=>setShowAdmin(false)}
+              style={{ background:"none", border:"none", fontSize:20,
+                cursor:"pointer", color:"#546E7A" }}>✕</button>
+          </div>
+          <AdminPanel users={users} setUsers={setUsers} />
+        </div>
+      )}
 
       {/* page title */}
       <div style={{ background:"#fff", borderBottom:"1px solid #DDE3E9",
