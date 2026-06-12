@@ -702,6 +702,73 @@ function DatumPicker({ label, value, onChange }) {
   );
 }
 
+// ── ONDERDEEL HELPERS (top-level zo React ze niet opnieuw aanmaakt) ──
+function OndRow({ col, aan, onToggle, actief, children }) {
+  const hasChildren = !!children;
+  return (
+    <div style={{ border:"1px solid #E0E0E0", borderRadius:5, margin:2,
+      background: aan?"#EBF5FF":"#FAFAFA",
+      gridColumn: (aan && hasChildren) ? "1 / -1" : "auto" }}>
+      <div onClick={onToggle}
+        style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 8px",
+          cursor:"pointer", userSelect:"none" }}>
+        <div style={{ width:18, height:18, borderRadius:3, flexShrink:0,
+          background: aan?"#1565C0":"#fff", border: aan?"2px solid #1565C0":"2px solid #BDBDBD",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          color:"#fff", fontSize:11, fontWeight:900 }}>{aan?"✓":""}</div>
+        <span style={{ fontSize:11, fontWeight: aan?600:400, color: aan?"#1C2B3A":"#90A4AE",
+          flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{col}</span>
+        <span style={{ fontSize:9, fontWeight:700, flexShrink:0,
+          color: aan?"#fff":"#BDBDBD", background: aan?"#1565C0":"#E0E0E0",
+          padding:"1px 6px", borderRadius:20 }}>{aan?"AAN":"UIT"}</span>
+      </div>
+      {aan && children && (
+        <div style={{ padding:"6px 10px 10px 10px", display:"flex", flexDirection:"column", gap:6,
+          background:"#F0F7FF", borderTop:"1px solid #DDEEFF" }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+function OField({ label, k, placeholder, type="text", unit, ond, ondSet }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+      {label && <span style={{ fontSize:11, color:"#546E7A", minWidth:70, flexShrink:0 }}>{label}</span>}
+      <input type={type} value={ond[k]||""}
+        onChange={e=>ondSet(k,e.target.value)}
+        placeholder={placeholder}
+        style={{ flex:1, fontSize:11, padding:"4px 7px", borderRadius:4, minWidth:0,
+          border:"1px solid #CFD8DC", outline:"none", background:"#fff", color:"#1C2B3A",
+          boxSizing:"border-box" }} />
+      {unit && <span style={{ fontSize:10, color:"#90A4AE", flexShrink:0 }}>{unit}</span>}
+    </div>
+  );
+}
+function OSelect({ label, k, options, ond, ondSet }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+      {label && <span style={{ fontSize:11, color:"#546E7A", minWidth:70, flexShrink:0 }}>{label}</span>}
+      <select value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
+        style={{ flex:1, fontSize:11, padding:"4px 7px", borderRadius:4,
+          border:"1px solid #CFD8DC", background:"#fff", color:"#1C2B3A", minWidth:0 }}>
+        <option value="">— kies —</option>
+        {options.map(o=><option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+}
+function ONote({ k, ond, ondSet }) {
+  return (
+    <textarea value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
+      placeholder="Notitie..."
+      rows={2}
+      style={{ fontSize:11, padding:"4px 7px", borderRadius:4, border:"1px solid #CFD8DC",
+        outline:"none", resize:"vertical", width:"100%", boxSizing:"border-box",
+        color:"#1C2B3A", background:"#fff" }} />
+  );
+}
+
 // ── TEAM EDIT INLINE (in ProjectRow) ─────────────────────────────────
 function TeamEditInline({ p, onSave, onClose }) {
   const [naam,        setNaam]       = useState(p.name||"");
@@ -829,191 +896,97 @@ function TeamEditInline({ p, onSave, onClose }) {
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:1, overflowY:"auto", flex:1,
             height:"calc(88vh - 120px)", alignContent:"start" }}>
 
-            {/* Helper components inline */}
-            {(() => {
-              function OndRow({ col, ci, children }) {
-                const aan = actief[col] !== false;
-                const hasChildren = !!children;
-                return (
-                  <div style={{ border:"1px solid #E0E0E0", borderRadius:5, margin:2,
-                    background: aan?"#EBF5FF":"#FAFAFA",
-                    gridColumn: (aan && hasChildren) ? "1 / -1" : "auto" }}>
-                    {/* Only the top bar toggles AAN/UIT */}
-                    <div onClick={()=>setActief(a=>({...a,[col]:!aan}))}
-                      style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 8px", cursor:"pointer",
-                        userSelect:"none" }}>
-                      <div style={{ width:18, height:18, borderRadius:3, flexShrink:0,
-                        background: aan?"#1565C0":"#fff", border: aan?"2px solid #1565C0":"2px solid #BDBDBD",
-                        display:"flex", alignItems:"center", justifyContent:"center",
-                        color:"#fff", fontSize:11, fontWeight:900, transition:"all .15s" }}>{aan?"✓":""}</div>
-                      <span style={{ fontSize:11, fontWeight: aan?600:400, color: aan?"#1C2B3A":"#90A4AE",
-                        flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{col}</span>
-                      <span style={{ fontSize:9, fontWeight:700, flexShrink:0,
-                        color: aan?"#fff":"#BDBDBD", background: aan?"#1565C0":"#E0E0E0",
-                        padding:"1px 6px", borderRadius:20 }}>{aan?"AAN":"UIT"}</span>
-                    </div>
-                    {/* Children area — clicks here do NOT toggle */}
-                    {aan && children && (
-                      <div style={{ padding:"6px 10px 10px 10px", display:"flex", flexDirection:"column", gap:6,
-                        background:"#F0F7FF", borderTop:"1px solid #DDEEFF" }}
-                        onClick={e=>e.stopPropagation()}
-                        onMouseDown={e=>e.stopPropagation()}>
-                        {children}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-              function OField({ label, k, placeholder, type="text", unit }) {
-                return (
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}
-                    onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}>
-                    {label && <span style={{ fontSize:11, color:"#546E7A", minWidth:70, flexShrink:0 }}>{label}</span>}
-                    <input type={type} value={ond[k]||""}
-                      onChange={e=>ondSet(k,e.target.value)}
-                      onKeyDown={e=>e.stopPropagation()}
-                      onKeyUp={e=>e.stopPropagation()}
-                      onKeyPress={e=>e.stopPropagation()}
-                      onClick={e=>e.stopPropagation()}
-                      onMouseDown={e=>e.stopPropagation()}
-                      onFocus={e=>e.stopPropagation()}
-                      placeholder={placeholder}
-                      style={{ flex:1, fontSize:11, padding:"4px 7px", borderRadius:4, minWidth:0,
-                        border:"1px solid #CFD8DC", outline:"none", background:"#fff", color:"#1C2B3A",
-                        boxSizing:"border-box" }} />
-                    {unit && <span style={{ fontSize:10, color:"#90A4AE", flexShrink:0 }}>{unit}</span>}
-                  </div>
-                );
-              }
-              function OSelect({ label, k, options }) {
-                return (
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}
-                    onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}>
-                    {label && <span style={{ fontSize:11, color:"#546E7A", minWidth:70, flexShrink:0 }}>{label}</span>}
-                    <select value={ond[k]||""}
-                      onChange={e=>ondSet(k,e.target.value)}
-                      onClick={e=>e.stopPropagation()}
-                      onMouseDown={e=>e.stopPropagation()}
-                      onFocus={e=>e.stopPropagation()}
-                      style={{ flex:1, fontSize:11, padding:"4px 7px", borderRadius:4,
-                        border:"1px solid #CFD8DC", background:"#fff", color:"#1C2B3A", minWidth:0 }}>
-                      <option value="">— kies —</option>
-                      {options.map(o=><option key={o} value={o}>{o}</option>)}
-                    </select>
-                  </div>
-                );
-              }
-              function ONote({ k }) {
-                return (
-                  <textarea
-                    value={ond[k]||""}
-                    onChange={e=>ondSet(k,e.target.value)}
-                    onKeyDown={e=>e.stopPropagation()}
-                    onKeyUp={e=>e.stopPropagation()}
-                    onKeyPress={e=>e.stopPropagation()}
-                    onClick={e=>e.stopPropagation()}
-                    onMouseDown={e=>e.stopPropagation()}
-                    onFocus={e=>e.stopPropagation()}
-                    placeholder="Notitie..."
-                    rows={2}
-                    style={{ fontSize:11, padding:"4px 7px", borderRadius:4, border:"1px solid #CFD8DC",
-                      outline:"none", resize:"vertical", width:"100%", boxSizing:"border-box",
-                      color:"#1C2B3A", background:"#fff", display:"block" }} />
-                );
-              }
-
-              return <>
-                <OndRow col="Staal" ci={0}>
-                  <ONote k="staal_notitie" />
+            <>
+                <OndRow col="Staal" aan={actief["Staal"]!==false} onToggle={()=>setActief(a=>({...a,["Staal"]:!(actief["Staal"]!==false)}))}>
+                  <ONote k="staal_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Constructie berekening" ci={1}>
-                  <ONote k="constructie_notitie" />
+                <OndRow col="Constructie berekening" aan={actief["Constructie berekening"]!==false} onToggle={()=>setActief(a=>({...a,["Constructie berekening"]:!(actief["Constructie berekening"]!==false)}))}>
+                  <ONote k="constructie_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Steen-strips / Metselwerk" ci={2}>
-                  <OSelect label="Keuze" k="steen_type" options={["Steen-strips","Metselwerk"]} />
-                  <ONote k="steen_notitie" />
+                <OndRow col="Steen-strips / Metselwerk" aan={actief["Steen-strips / Metselwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Steen-strips / Metselwerk"]:!(actief["Steen-strips / Metselwerk"]!==false)}))}>
+                  <OSelect label="Keuze" k="steen_type" options={["Steen-strips","Metselwerk"]}  ond={ond} ondSet={ondSet} />
+                  <ONote k="steen_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Kozijn" ci={3}>
-                  <OSelect label="Materiaal" k="kozijn_materiaal" options={["Kunststof","Hout","Aluminium"]} />
-                  <ONote k="kozijn_notitie" />
+                <OndRow col="Kozijn" aan={actief["Kozijn"]!==false} onToggle={()=>setActief(a=>({...a,["Kozijn"]:!(actief["Kozijn"]!==false)}))}>
+                  <OSelect label="Materiaal" k="kozijn_materiaal" options={["Kunststof","Hout","Aluminium"]}  ond={ond} ondSet={ondSet} />
+                  <ONote k="kozijn_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Lichtstraat" ci={4}>
-                  <OField label="Maat" k="lichtstraat_maat" placeholder="bv. 60x120 cm" />
-                  <ONote k="lichtstraat_notitie" />
+                <OndRow col="Lichtstraat" aan={actief["Lichtstraat"]!==false} onToggle={()=>setActief(a=>({...a,["Lichtstraat"]:!(actief["Lichtstraat"]!==false)}))}>
+                  <OField label="Maat" k="lichtstraat_maat" placeholder="bv. 60x120 cm"  ond={ond} ondSet={ondSet} />
+                  <ONote k="lichtstraat_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Heiwerk" ci={5}>
-                  <OField label="Aantal palen" k="hei_palen" placeholder="bv. 12" type="number" unit="palen" />
-                  <ONote k="hei_notitie" />
+                <OndRow col="Heiwerk" aan={actief["Heiwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Heiwerk"]:!(actief["Heiwerk"]!==false)}))}>
+                  <OField label="Aantal palen" k="hei_palen" placeholder="bv. 12" type="number" unit="palen"  ond={ond} ondSet={ondSet} />
+                  <ONote k="hei_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Fundering" ci={6}>
-                  <OSelect label="Type" k="fund_type" options={["Fundering op staal","Broodjesvloer"]} />
-                  <OField label="Beton m³" k="fund_beton" placeholder="bv. 4.5" type="number" unit="m³" />
-                  <ONote k="fund_notitie" />
+                <OndRow col="Fundering" aan={actief["Fundering"]!==false} onToggle={()=>setActief(a=>({...a,["Fundering"]:!(actief["Fundering"]!==false)}))}>
+                  <OSelect label="Type" k="fund_type" options={["Fundering op staal","Broodjesvloer"]}  ond={ond} ondSet={ondSet} />
+                  <OField label="Beton m³" k="fund_beton" placeholder="bv. 4.5" type="number" unit="m³"  ond={ond} ondSet={ondSet} />
+                  <ONote k="fund_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Electra" ci={7}>
-                  <ONote k="electra_notitie" />
+                <OndRow col="Electra" aan={actief["Electra"]!==false} onToggle={()=>setActief(a=>({...a,["Electra"]:!(actief["Electra"]!==false)}))}>
+                  <ONote k="electra_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Verwarming" ci={8}>
-                  <OSelect label="Type" k="verw_type" options={["Radiator","Vloerverwarming aanbouw","Vloerverwarming aanbouw + woonkamer"]} />
+                <OndRow col="Verwarming" aan={actief["Verwarming"]!==false} onToggle={()=>setActief(a=>({...a,["Verwarming"]:!(actief["Verwarming"]!==false)}))}>
+                  <OSelect label="Type" k="verw_type" options={["Radiator","Vloerverwarming aanbouw","Vloerverwarming aanbouw + woonkamer"]}  ond={ond} ondSet={ondSet} />
                   {(ond["verw_type"]||"").includes("Radiator") && (
-                    <OField label="Aantal" k="verw_radiator_aantal" placeholder="bv. 3" type="number" unit="stuks" />
+                    <OField label="Aantal" k="verw_radiator_aantal" placeholder="bv. 3" type="number" unit="stuks"  ond={ond} ondSet={ondSet} />
                   )}
                   {(ond["verw_type"]||"").includes("Vloerverwarming") && (
-                    <OField label="Opp. m²" k="verw_m2" placeholder="bv. 25" type="number" unit="m²" />
+                    <OField label="Opp. m²" k="verw_m2" placeholder="bv. 25" type="number" unit="m²"  ond={ond} ondSet={ondSet} />
                   )}
-                  <ONote k="verw_notitie" />
+                  <ONote k="verw_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Dakbedekking" ci={9}>
-                  <OSelect label="Type" k="dak_type" options={["EPDM","Bitumen"]} />
-                  <ONote k="dak_notitie" />
+                <OndRow col="Dakbedekking" aan={actief["Dakbedekking"]!==false} onToggle={()=>setActief(a=>({...a,["Dakbedekking"]:!(actief["Dakbedekking"]!==false)}))}>
+                  <OSelect label="Type" k="dak_type" options={["EPDM","Bitumen"]}  ond={ond} ondSet={ondSet} />
+                  <ONote k="dak_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Hijsen" ci={10}>
-                  <ONote k="hijsen_notitie" />
+                <OndRow col="Hijsen" aan={actief["Hijsen"]!==false} onToggle={()=>setActief(a=>({...a,["Hijsen"]:!(actief["Hijsen"]!==false)}))}>
+                  <ONote k="hijsen_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Tegelwerk" ci={11}>
-                  <OField label="Opp. m²" k="tegel_m2" placeholder="bv. 18" type="number" unit="m²" />
-                  <ONote k="tegel_notitie" />
+                <OndRow col="Tegelwerk" aan={actief["Tegelwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Tegelwerk"]:!(actief["Tegelwerk"]!==false)}))}>
+                  <OField label="Opp. m²" k="tegel_m2" placeholder="bv. 18" type="number" unit="m²"  ond={ond} ondSet={ondSet} />
+                  <ONote k="tegel_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Stucwerk" ci={12}>
-                  <OField label="Opp. m²" k="stuc_m2" placeholder="bv. 30" type="number" unit="m²" />
-                  <ONote k="stuc_notitie" />
+                <OndRow col="Stucwerk" aan={actief["Stucwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Stucwerk"]:!(actief["Stucwerk"]!==false)}))}>
+                  <OField label="Opp. m²" k="stuc_m2" placeholder="bv. 30" type="number" unit="m²"  ond={ond} ondSet={ondSet} />
+                  <ONote k="stuc_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Loodgieter" ci={13}>
-                  <OSelect label="Buitenkraan" k="lood_buitenkraan" options={["Ja","Nee"]} />
-                  <ONote k="lood_notitie" />
+                <OndRow col="Loodgieter" aan={actief["Loodgieter"]!==false} onToggle={()=>setActief(a=>({...a,["Loodgieter"]:!(actief["Loodgieter"]!==false)}))}>
+                  <OSelect label="Buitenkraan" k="lood_buitenkraan" options={["Ja","Nee"]}  ond={ond} ondSet={ondSet} />
+                  <ONote k="lood_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Container" ci={14}>
-                  <OField label="Aantal" k="cont_aantal" placeholder="bv. 2" type="number" unit="stuks" />
-                  <ONote k="cont_notitie" />
+                <OndRow col="Container" aan={actief["Container"]!==false} onToggle={()=>setActief(a=>({...a,["Container"]:!(actief["Container"]!==false)}))}>
+                  <OField label="Aantal" k="cont_aantal" placeholder="bv. 2" type="number" unit="stuks"  ond={ond} ondSet={ondSet} />
+                  <ONote k="cont_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Steigers" ci={15}>
-                  <ONote k="steigers_notitie" />
+                <OndRow col="Steigers" aan={actief["Steigers"]!==false} onToggle={()=>setActief(a=>({...a,["Steigers"]:!(actief["Steigers"]!==false)}))}>
+                  <ONote k="steigers_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Trap" ci={16}>
-                  <ONote k="trap_notitie" />
+                <OndRow col="Trap" aan={actief["Trap"]!==false} onToggle={()=>setActief(a=>({...a,["Trap"]:!(actief["Trap"]!==false)}))}>
+                  <ONote k="trap_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
-                <OndRow col="Extra" ci={17}>
-                  <ONote k="extra_notitie" />
+                <OndRow col="Extra" aan={actief["Extra"]!==false} onToggle={()=>setActief(a=>({...a,["Extra"]:!(actief["Extra"]!==false)}))}>
+                  <ONote k="extra_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
-              </>;
-            })()}
+            </>
           </div>
         </>}
 
