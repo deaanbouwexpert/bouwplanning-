@@ -756,7 +756,7 @@ function TeamEditInline({ p, onSave, onClose }) {
   return (
     <div style={{ display:"flex", flexDirection:"column",
       background:"#fff", borderRadius:10, border:"2px solid #90CAF9",
-      boxShadow:"0 8px 40px rgba(0,0,0,.25)", width:420 }}>
+      boxShadow:"0 8px 40px rgba(0,0,0,.25)", width:560 }}>
 
       {/* Tabs */}
       <div style={{ display:"flex", background:"#E3F0FB", borderRadius:"6px 6px 0 0", padding:"4px 4px 0" }}>
@@ -824,7 +824,7 @@ function TeamEditInline({ p, onSave, onClose }) {
 
         {/* ── TAB: ONDERDELEN ── */}
         {tab==="onderdelen" && <>
-          <div style={{ display:"flex", flexDirection:"column", gap:8, height:"52vh", overflowY:"scroll", paddingRight:8, paddingBottom:8 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, height:"55vh", overflowY:"scroll", paddingRight:6, paddingBottom:8, alignContent:"start" }}>
 
             {/* Helper components inline */}
             {(() => {
@@ -834,7 +834,7 @@ function TeamEditInline({ p, onSave, onClose }) {
                 return (
                   <div style={{ borderRadius:6, border: aan?"1px solid #90CAF9":"1px solid #E0E0E0",
                     background: aan?"#F0F8FF":"#F9F9F9", overflow:"hidden",
-                    }}>
+                    gridColumn: (aan && hasChildren) ? "1 / -1" : "auto" }}>
                     <div onClick={()=>setActief(a=>({...a,[col]:!aan}))}
                       style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 12px", cursor:"pointer" }}>
                       <div style={{ width:22, height:22, borderRadius:4, flexShrink:0,
