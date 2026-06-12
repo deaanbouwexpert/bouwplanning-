@@ -2796,7 +2796,7 @@ const KRITIEKE_KOLOMMEN = ["Kozijn","Steen-strips / Metselwerk","Lichtstraat","C
 const BESTELD_STATUSSEN = ["Besteld","Geleverd","Gereed"];
 
 function WaarschuwingsBanner({ projects }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const vandaag = new Date();
 
   function parseDate(d="") {
@@ -2811,7 +2811,7 @@ function WaarschuwingsBanner({ projects }) {
     const start = parseDate(p.date);
     if (!start) return;
     const maandenTot = (start - vandaag) / (1000 * 60 * 60 * 24 * 30);
-    if (maandenTot > 3 || maandenTot < 0) return; // alleen 0-3 maanden vooruit
+    if (maandenTot > 2 || maandenTot < 0) return; // alleen 0-2 maanden vooruit
 
     const probleem = [];
     KRITIEKE_KOLOMMEN.forEach(kol => {
