@@ -754,9 +754,9 @@ function TeamEditInline({ p, onSave, onClose }) {
   );
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", marginTop:4,
-      background:"#fff", borderRadius:8, border:"2px solid #90CAF9",
-      boxShadow:"0 4px 20px rgba(0,0,0,.12)", minWidth:340, maxWidth:400 }}>
+    <div style={{ display:"flex", flexDirection:"column",
+      background:"#fff", borderRadius:10, border:"2px solid #90CAF9",
+      boxShadow:"0 8px 40px rgba(0,0,0,.25)", width:420 }}>
 
       {/* Tabs */}
       <div style={{ display:"flex", background:"#E3F0FB", borderRadius:"6px 6px 0 0", padding:"4px 4px 0" }}>
@@ -765,7 +765,7 @@ function TeamEditInline({ p, onSave, onClose }) {
         ))}
       </div>
 
-      <div style={{ padding:"10px", display:"flex", flexDirection:"column", gap:6 }}>
+      <div style={{ padding:"12px", display:"flex", flexDirection:"column", gap:7 }}>
 
         {/* ── TAB: ALGEMEEN ── */}
         {tab==="algemeen" && <>
@@ -824,7 +824,7 @@ function TeamEditInline({ p, onSave, onClose }) {
 
         {/* ── TAB: ONDERDELEN ── */}
         {tab==="onderdelen" && <>
-          <div style={{ display:"flex", flexDirection:"column", gap:4, maxHeight:500, overflowY:"auto", paddingRight:4 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:5, maxHeight:"60vh", overflowY:"auto", paddingRight:6 }}>
 
             {/* Helper components inline */}
             {(() => {
@@ -1267,28 +1267,36 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                 }
               </div>
               {/* Team + klant info */}
-              {editTeam===p.id ? (
-                <TeamEditInline p={p} onSave={(fields)=>{ updateTeam(p.id,fields); }} onClose={()=>setEditTeam(null)} />
-              ) : (
-                <div>
-                  {(p.leider||p.collega) && (
-                    <div style={{ fontSize:10, color:"#546E7A" }}>
-                      👷 {p.leider}{p.collega?" & "+p.collega:""}
-                    </div>
-                  )}
-                  {p.klantNaam && (
-                    <div style={{ fontSize:10, color:"#546E7A" }}>
-                      👤 {p.klantNaam}{p.klantTel ? " · "+p.klantTel : ""}
-                    </div>
-                  )}
-                  {canEdit && !p.afgerond && (
-                    <button onClick={()=>setEditTeam(p.id)}
-                      style={{ marginTop:2, fontSize:10, background:"#F5F7FA",
-                        border:"1px solid #DDE3E9", borderRadius:4, padding:"2px 6px",
-                        cursor:"pointer", color:"#546E7A" }}>✏️ Bewerken</button>
-                  )}
-                </div>
+              {editTeam===p.id && typeof document !== "undefined" && ReactDOM.createPortal(
+                <div style={{ position:"fixed", inset:0, zIndex:9998, background:"rgba(0,0,0,.35)" }}
+                  onMouseDown={()=>setEditTeam(null)}>
+                  <div style={{ position:"fixed", top:"50%", left:"50%",
+                    transform:"translate(-50%,-50%)", zIndex:9999, maxHeight:"90vh",
+                    overflowY:"auto", borderRadius:10 }}
+                    onMouseDown={e=>e.stopPropagation()}>
+                    <TeamEditInline p={p} onSave={(fields)=>{ updateTeam(p.id,fields); }} onClose={()=>setEditTeam(null)} />
+                  </div>
+                </div>,
+                document.body
               )}
+              <div>
+                {(p.leider||p.collega) && (
+                  <div style={{ fontSize:10, color:"#546E7A" }}>
+                    👷 {p.leider}{p.collega?" & "+p.collega:""}
+                  </div>
+                )}
+                {p.klantNaam && (
+                  <div style={{ fontSize:10, color:"#546E7A" }}>
+                    👤 {p.klantNaam}{p.klantTel ? " · "+p.klantTel : ""}
+                  </div>
+                )}
+                {canEdit && !p.afgerond && (
+                  <button onClick={()=>setEditTeam(p.id)}
+                    style={{ marginTop:2, fontSize:10, background:"#F5F7FA",
+                      border:"1px solid #DDE3E9", borderRadius:4, padding:"2px 6px",
+                      cursor:"pointer", color:"#546E7A" }}>✏️ Bewerken</button>
+                )}
+              </div>
             </div>
           </div>
         </td>
