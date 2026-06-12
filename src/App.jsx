@@ -13,9 +13,9 @@ const ADMIN_USER = {
 };
 
 const COLUMNS = [
-  "Staal","Constructie","Steen-strips","Kozijn/Beton","Beton","Lichtstraat",
-  "Heien","Fundering","Electra","Vloerverwarming","Dakwerken","Hijsen",
-  "Tegelwerk","Stuc","Loodgieters","Container","Steigers","Trap"
+  "Staal","Constructie berekening","Steen-strips / Metselwerk","Kozijn","Lichtstraat",
+  "Heiwerk","Fundering","Electra","Verwarming","Dakbedekking","Hijsen",
+  "Tegelwerk","Stucwerk","Loodgieter","Container","Steigers","Trap","Extra"
 ];
 
 const STATUS_META = {
@@ -711,8 +711,10 @@ function TeamEditInline({ p, onSave, onClose }) {
   const [startdatum,  setStartdatum] = useState(p.date||"");
   const [type,        setType]       = useState(p.type||"");
   const [ingemeten,   setIngemeten]  = useState(p.ingemeten||false);
-  const [ingemetenDatum, setIngemetenDatum] = useState(p.ingemetenDatum||"");
+  const [_ingemetenDatum] = useState(""); // removed
   const [actief,      setActief]     = useState(p.actief || COLUMNS.reduce((a,c)=>({...a,[c]:true}),{}));
+  const [ond,         setOnd]        = useState(p.ond || {});
+  function ondSet(key, val) { setOnd(o => ({...o, [key]: val})); }
   const [klantNaam,   setKlantNaam]  = useState(p.klantNaam||"");
   const [klantTel,    setKlantTel]   = useState(p.klantTel||"");
   const [tab,         setTab]        = useState("algemeen");
@@ -732,7 +734,7 @@ function TeamEditInline({ p, onSave, onClose }) {
   async function save() {
     setSaving(true);
     await onSave({ name: naam, leider, collega, weken, date: startdatum, type,
-      ingemeten, ingemetenDatum, actief, klantNaam, klantTel });
+      ingemeten, actief, ond, klantNaam, klantTel });
     setSaving(false);
     setSaved(true);
     setTimeout(() => { setSaved(false); onClose(); }, 900);
@@ -805,9 +807,7 @@ function TeamEditInline({ p, onSave, onClose }) {
               {ingemeten ? "Ingemeten ✓" : "Nog niet ingemeten"}
             </span>
           </div>
-          {ingemeten && (
-            <DatumPicker label="📅 Datum inmeten" value={ingemetenDatum} onChange={setIngemetenDatum} />
-          )}
+
 
           {sectionLabel("Team")}
           <MedewerkerSelect label="👷 Projectleider" value={leider} onChange={setLeider} />
@@ -824,36 +824,160 @@ function TeamEditInline({ p, onSave, onClose }) {
 
         {/* ── TAB: ONDERDELEN ── */}
         {tab==="onderdelen" && <>
-          {sectionLabel("Vink aan welke onderdelen van toepassing zijn")}
-          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-            <button onClick={()=>setActief(COLUMNS.reduce((a,c)=>({...a,[c]:true}),{}))}
-              style={{ fontSize:10, background:"#E8F5E9", color:"#2E7D32", border:"1px solid #A5D6A7",
-                borderRadius:4, padding:"2px 8px", cursor:"pointer", fontWeight:600 }}>Alles aan</button>
-            <button onClick={()=>setActief(COLUMNS.reduce((a,c)=>({...a,[c]:false}),{}))}
-              style={{ fontSize:10, background:"#FFEBEE", color:"#B71C1C", border:"1px solid #EF9A9A",
-                borderRadius:4, padding:"2px 8px", cursor:"pointer", fontWeight:600 }}>Alles uit</button>
-          </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:3, maxHeight:300, overflowY:"auto" }}>
-            {COLUMNS.map((col, ci) => {
-              const aan = actief[col] !== false;
-              return (
-                <div key={col} onClick={()=>setActief(a=>({...a,[col]:!aan}))}
-                  style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 8px",
-                    borderRadius:5, cursor:"pointer", background: aan?"#F0F8FF":"#F5F5F5",
-                    border: aan?"1px solid #90CAF9":"1px solid #E0E0E0" }}>
-                  <div style={{ width:18, height:18, borderRadius:3, flexShrink:0,
-                    background: aan?"#1565C0":"#fff", border: aan?"none":"2px solid #BDBDBD",
-                    display:"flex", alignItems:"center", justifyContent:"center",
-                    color:"#fff", fontSize:11, fontWeight:900 }}>{aan?"✓":""}</div>
-                  <span style={{ fontSize:12, fontWeight: aan?600:400,
-                    color: aan?"#1C2B3A":"#90A4AE" }}>
-                    {["⚙️","📐","🧱","🪟","🏗️","💡","🔨","🏛️","⚡","🌡️","🏠","🏗️","🔲","🪣","🔧","📦","🏗️","🪜"][ci]} {col}
-                  </span>
-                  <span style={{ marginLeft:"auto", fontSize:10, fontWeight:700,
-                    color: aan?"#1565C0":"#BDBDBD" }}>{aan?"AAN":"UIT"}</span>
-                </div>
-              );
-            })}
+          <div style={{ display:"flex", flexDirection:"column", gap:6, maxHeight:420, overflowY:"auto", paddingRight:2 }}>
+
+            {/* Helper components inline */}
+            {(() => {
+              function OndRow({ col, ci, children }) {
+                const aan = actief[col] !== false;
+                return (
+                  <div style={{ borderRadius:6, border: aan?"1px solid #90CAF9":"1px solid #E0E0E0",
+                    background: aan?"#F0F8FF":"#F9F9F9", overflow:"hidden" }}>
+                    <div onClick={()=>setActief(a=>({...a,[col]:!aan}))}
+                      style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 8px", cursor:"pointer" }}>
+                      <div style={{ width:17, height:17, borderRadius:3, flexShrink:0,
+                        background: aan?"#1565C0":"#fff", border: aan?"none":"2px solid #BDBDBD",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        color:"#fff", fontSize:10, fontWeight:900 }}>{aan?"✓":""}</div>
+                      <span style={{ fontSize:11, fontWeight:600, color: aan?"#1C2B3A":"#90A4AE", flex:1 }}>{col}</span>
+                      <span style={{ fontSize:9, fontWeight:700, color: aan?"#1565C0":"#BDBDBD" }}>{aan?"AAN":"UIT"}</span>
+                    </div>
+                    {aan && children && (
+                      <div style={{ padding:"0 8px 8px 8px", display:"flex", flexDirection:"column", gap:4 }}
+                        onClick={e=>e.stopPropagation()}>
+                        {children}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              function OField({ label, k, placeholder, type="text", unit }) {
+                return (
+                  <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                    {label && <span style={{ fontSize:10, color:"#546E7A", minWidth:80 }}>{label}</span>}
+                    <input type={type} value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
+                      placeholder={placeholder}
+                      style={{ flex:1, fontSize:11, padding:"3px 6px", borderRadius:4,
+                        border:"1px solid #CFD8DC", outline:"none", background:"#fff", color:"#1C2B3A" }} />
+                    {unit && <span style={{ fontSize:10, color:"#90A4AE" }}>{unit}</span>}
+                  </div>
+                );
+              }
+              function OSelect({ label, k, options }) {
+                return (
+                  <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                    {label && <span style={{ fontSize:10, color:"#546E7A", minWidth:80 }}>{label}</span>}
+                    <select value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
+                      style={{ flex:1, fontSize:11, padding:"3px 6px", borderRadius:4,
+                        border:"1px solid #CFD8DC", background:"#fff", color:"#1C2B3A" }}>
+                      <option value="">— kies —</option>
+                      {options.map(o=><option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                );
+              }
+              function ONote({ k }) {
+                return (
+                  <textarea value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
+                    placeholder="Notitie..."
+                    rows={2}
+                    style={{ fontSize:10, padding:"3px 6px", borderRadius:4, border:"1px solid #CFD8DC",
+                      outline:"none", resize:"vertical", width:"100%", boxSizing:"border-box", color:"#1C2B3A" }} />
+                );
+              }
+
+              return <>
+                <OndRow col="Staal" ci={0}>
+                  <ONote k="staal_notitie" />
+                </OndRow>
+
+                <OndRow col="Constructie berekening" ci={1}>
+                  <ONote k="constructie_notitie" />
+                </OndRow>
+
+                <OndRow col="Steen-strips / Metselwerk" ci={2}>
+                  <OSelect label="Keuze" k="steen_type" options={["Steen-strips","Metselwerk"]} />
+                  <ONote k="steen_notitie" />
+                </OndRow>
+
+                <OndRow col="Kozijn" ci={3}>
+                  <OSelect label="Materiaal" k="kozijn_materiaal" options={["Kunststof","Hout","Aluminium"]} />
+                  <ONote k="kozijn_notitie" />
+                </OndRow>
+
+                <OndRow col="Lichtstraat" ci={4}>
+                  <OField label="Maat" k="lichtstraat_maat" placeholder="bv. 60x120 cm" />
+                  <ONote k="lichtstraat_notitie" />
+                </OndRow>
+
+                <OndRow col="Heiwerk" ci={5}>
+                  <OField label="Aantal palen" k="hei_palen" placeholder="bv. 12" type="number" unit="palen" />
+                  <ONote k="hei_notitie" />
+                </OndRow>
+
+                <OndRow col="Fundering" ci={6}>
+                  <OSelect label="Type" k="fund_type" options={["Fundering op staal","Broodjesvloer"]} />
+                  <OField label="Beton m³" k="fund_beton" placeholder="bv. 4.5" type="number" unit="m³" />
+                  <ONote k="fund_notitie" />
+                </OndRow>
+
+                <OndRow col="Electra" ci={7}>
+                  <ONote k="electra_notitie" />
+                </OndRow>
+
+                <OndRow col="Verwarming" ci={8}>
+                  <OSelect label="Type" k="verw_type" options={["Radiator","Vloerverwarming aanbouw","Vloerverwarming aanbouw + woonkamer"]} />
+                  {(ond["verw_type"]||"").includes("Radiator") && (
+                    <OField label="Aantal" k="verw_radiator_aantal" placeholder="bv. 3" type="number" unit="stuks" />
+                  )}
+                  {(ond["verw_type"]||"").includes("Vloerverwarming") && (
+                    <OField label="Opp. m²" k="verw_m2" placeholder="bv. 25" type="number" unit="m²" />
+                  )}
+                  <ONote k="verw_notitie" />
+                </OndRow>
+
+                <OndRow col="Dakbedekking" ci={9}>
+                  <OSelect label="Type" k="dak_type" options={["EPDM","Bitumen"]} />
+                  <ONote k="dak_notitie" />
+                </OndRow>
+
+                <OndRow col="Hijsen" ci={10}>
+                  <ONote k="hijsen_notitie" />
+                </OndRow>
+
+                <OndRow col="Tegelwerk" ci={11}>
+                  <OField label="Opp. m²" k="tegel_m2" placeholder="bv. 18" type="number" unit="m²" />
+                  <ONote k="tegel_notitie" />
+                </OndRow>
+
+                <OndRow col="Stucwerk" ci={12}>
+                  <OField label="Opp. m²" k="stuc_m2" placeholder="bv. 30" type="number" unit="m²" />
+                  <ONote k="stuc_notitie" />
+                </OndRow>
+
+                <OndRow col="Loodgieter" ci={13}>
+                  <OSelect label="Buitenkraan" k="lood_buitenkraan" options={["Ja","Nee"]} />
+                  <ONote k="lood_notitie" />
+                </OndRow>
+
+                <OndRow col="Container" ci={14}>
+                  <OField label="Aantal" k="cont_aantal" placeholder="bv. 2" type="number" unit="stuks" />
+                  <ONote k="cont_notitie" />
+                </OndRow>
+
+                <OndRow col="Steigers" ci={15}>
+                  <ONote k="steigers_notitie" />
+                </OndRow>
+
+                <OndRow col="Trap" ci={16}>
+                  <ONote k="trap_notitie" />
+                </OndRow>
+
+                <OndRow col="Extra" ci={17}>
+                  <ONote k="extra_notitie" />
+                </OndRow>
+              </>;
+            })()}
           </div>
         </>}
 
@@ -2400,7 +2524,7 @@ function Onderdelen({ projects }) {
                 onMouseEnter={e=>{ if(hasItems) { e.currentTarget.style.borderColor="#E65100"; e.currentTarget.style.boxShadow="0 4px 16px rgba(230,81,0,.15)"; e.currentTarget.style.transform="translateY(-2px)"; }}}
                 onMouseLeave={e=>{ e.currentTarget.style.borderColor=hasItems?"#DDE3E9":"#F0F2F5"; e.currentTarget.style.boxShadow=hasItems?"0 1px 4px rgba(0,0,0,.06)":"none"; e.currentTarget.style.transform="translateY(0)"; }}>
                 <div style={{ fontSize:22, marginBottom:6 }}>
-                  {["⚙️","📐","🧱","🪟","🏗️","💡","🔨","🏛️","⚡","🌡️","🏠","🏗️","🔲","🪣","🔧","📦","🏗️","🪜"][ci] || "🔩"}
+                  {["⚙️","📐","🧱","🪟","💡","🔨","🏛️","⚡","🌡️","🏠","🏗️","🔲","🪣","🔧","📦","🏗️","🪜","➕"][ci] || "🔩"}
                 </div>
                 <div style={{ fontWeight:800, fontSize:13, color:"#1C2B3A", marginBottom:4 }}>
                   {col}
@@ -2546,7 +2670,7 @@ function Onderdelen({ projects }) {
                       <td style={{ ...TD, fontWeight:700, color:"#1C2B3A",
                         position:"sticky", left:0, background:"inherit",
                         borderRight:"2px solid #DDE3E9", padding:"8px 14px" }}>
-                        {["⚙️","📐","🧱","🪟","🏗️","💡","🔨","🏛️","⚡","🌡️","🏠","🏗️","🔲","🪣","🔧","📦","🏗️","🪜"][ci] || "🔩"} {col}
+                        {["⚙️","📐","🧱","🪟","💡","🔨","🏛️","⚡","🌡️","🏠","🏗️","🔲","🪣","🔧","📦","🏗️","🪜","➕"][ci] || "🔩"} {col}
                       </td>
                       <td style={{ ...TD, textAlign:"center", fontWeight:800,
                         color: total>0?"#E65100":"#BDBDBD" }}>{total||"—"}</td>
