@@ -2790,6 +2790,103 @@ const TABS = [
   { key:"logboek",      label:"📝 Logboek" },
 ];
 
+
+// ── WAARSCHUWINGEN BANNER ─────────────────────────────────────────────
+const KRITIEKE_KOLOMMEN = ["Kozijn","Steen-strips / Metselwerk","Lichtstraat","Constructie berekening"];
+const BESTELD_STATUSSEN = ["Besteld","Geleverd","Gereed"];
+
+function WaarschuwingsBanner({ projects }) {
+  const [open, setOpen] = useState(true);
+  const vandaag = new Date();
+
+  function parseDate(d="") {
+    const m = d.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+    if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+    return null;
+  }
+
+  // Projecten waarvan startdatum binnen 3 maanden valt
+  const waarschuwingen = [];
+  projects.filter(p => !p.afgerond).forEach(p => {
+    const start = parseDate(p.date);
+    if (!start) return;
+    const maandenTot = (start - vandaag) / (1000 * 60 * 60 * 24 * 30);
+    if (maandenTot > 3 || maandenTot < 0) return; // alleen 0-3 maanden vooruit
+
+    const probleem = [];
+    KRITIEKE_KOLOMMEN.forEach(kol => {
+      const ci = COLUMNS.indexOf(kol);
+      if (ci === -1) return;
+      // Onderdeel moet actief zijn (niet uitgeschakeld)
+      if (p.actief && p.actief[kol] === false) return;
+      const status = p.statuses[ci] || "";
+      const isOk = BESTELD_STATUSSEN.some(s => status.startsWith(s));
+      if (!isOk) probleem.push(kol);
+    });
+
+    if (probleem.length > 0) {
+      const dagenTot = Math.ceil((start - vandaag) / (1000 * 60 * 60 * 24));
+      waarschuwingen.push({ project: p, probleem, dagenTot });
+    }
+  });
+
+  if (waarschuwingen.length === 0) return null;
+
+  return (
+    <div style={{ background:"#FFF3CD", borderBottom:"2px solid #FFC107",
+      padding:"0 24px" }}>
+      {/* Header balk — altijd zichtbaar */}
+      <div onClick={()=>setOpen(v=>!v)}
+        style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 0",
+          cursor:"pointer", userSelect:"none" }}>
+        <span style={{ fontSize:18 }}>⚠️</span>
+        <span style={{ fontWeight:800, fontSize:13, color:"#7D4F00" }}>
+          {waarschuwingen.length} project{waarschuwingen.length!==1?"en":""} — kritieke onderdelen nog niet besteld!
+        </span>
+        <span style={{ marginLeft:"auto", fontSize:12, color:"#A06000", fontWeight:600 }}>
+          {open ? "▲ Inklappen" : "▼ Uitklappen"}
+        </span>
+      </div>
+
+      {/* Detail lijst */}
+      {open && (
+        <div style={{ paddingBottom:14, display:"flex", flexDirection:"column", gap:8 }}>
+          {waarschuwingen.map(({ project: p, probleem, dagenTot }) => (
+            <div key={p.id} style={{ background:"#fff", border:"2px solid #FFC107",
+              borderRadius:8, padding:"10px 14px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6, flexWrap:"wrap" }}>
+                <span style={{ fontWeight:800, fontSize:13, color:"#1C2B3A" }}>
+                  📍 {p.name}
+                </span>
+                <span style={{ background: dagenTot <= 14 ? "#FFEBEE" : "#FFF3CD",
+                  color: dagenTot <= 14 ? "#B71C1C" : "#7D4F00",
+                  border: `1px solid ${dagenTot <= 14 ? "#EF9A9A" : "#FFC107"}`,
+                  borderRadius:4, padding:"2px 8px", fontSize:11, fontWeight:700 }}>
+                  {dagenTot <= 0 ? "⛔ AL BEGONNEN"
+                    : dagenTot <= 14 ? `🔴 Nog ${dagenTot} dagen!`
+                    : `🟡 Start over ${dagenTot} dagen`}
+                </span>
+                <span style={{ fontSize:11, color:"#78909C" }}>
+                  Startdatum: {p.date}
+                </span>
+              </div>
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                {probleem.map(kol => (
+                  <span key={kol} style={{ background:"#FFEBEE", color:"#B71C1C",
+                    border:"1px solid #EF9A9A", borderRadius:4,
+                    padding:"3px 10px", fontSize:11, fontWeight:700 }}>
+                    ⚠️ {kol} — niet besteld
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const SESSION_KEY = "bouw_session";
 const SESSION_DAYS = 5;
 
@@ -2944,6 +3041,9 @@ export default function App() {
           <AdminPanel users={users} setUsers={setUsers} />
         </div>
       )}
+
+      {/* waarschuwingen */}
+      <WaarschuwingsBanner projects={projects||[]} />
 
       {/* page title */}
       <div style={{ background:"#fff", borderBottom:"1px solid #DDE3E9",
