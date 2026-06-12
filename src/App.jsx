@@ -693,11 +693,7 @@ function TeamEditInline({ p, onSave, onClose }) {
   const [type,       setType]       = useState(p.type||"");
 
   function save() {
-    onSave("leider",     leider);
-    onSave("collega",    collega);
-    onSave("duur",       duur);
-    onSave("oplevering", oplevering);
-    onSave("type",       type);
+    onSave({ leider, collega, duur, oplevering, type });
     onClose();
   }
 
@@ -852,8 +848,8 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
   }
 
 
-  async function updateTeam(pid, field, val) {
-    const updated = projects.map(p => p.id===pid ? { ...p, [field]: val } : p);
+  async function updateTeam(pid, fields) {
+    const updated = projects.map(p => p.id===pid ? { ...p, ...fields } : p);
     setProjects(updated);
     await saveData("bouw_projects", updated);
   }
@@ -971,7 +967,7 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
               </div>
 
               {editTeam===p.id ? (
-                <TeamEditInline p={p} onSave={(field,val)=>{ updateTeam(p.id,field,val); }} onClose={()=>setEditTeam(null)} />
+                <TeamEditInline p={p} onSave={(fields)=>{ updateTeam(p.id,fields); }} onClose={()=>setEditTeam(null)} />
               ) : (
                 <div>
                   {(p.leider||p.collega) && (
