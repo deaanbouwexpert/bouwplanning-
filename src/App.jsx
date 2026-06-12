@@ -708,7 +708,7 @@ function TeamEditInline({ p, onSave, onClose }) {
   const [collega,    setCollega]    = useState(p.collega||"");
   const [weken,      setWeken]      = useState(String(p.weken||p.duur||"4"));
   const [startdatum, setStartdatum] = useState(p.date||"");
-  const [oplevering, setOplevering] = useState(p.oplevering||"");
+  const [oplevering] = useState(p.oplevering||""); // kept for backward compat
   const [type,       setType]       = useState(p.type||"");
   const [saving,     setSaving]     = useState(false);
   const [saved,      setSaved]      = useState(false);
@@ -739,7 +739,7 @@ function TeamEditInline({ p, onSave, onClose }) {
 
       <DatumPicker label="📅 Startdatum" value={startdatum} onChange={setStartdatum} />
 
-      {/* Weken + live einddatum preview */}
+      {/* Weken + automatische einddatum */}
       <div>
         <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>
           ⏱ Aantal weken werk
@@ -751,18 +751,20 @@ function TeamEditInline({ p, onSave, onClose }) {
             style={{ fontSize:12, padding:"5px 8px", borderRadius:4, border:"2px solid #90CAF9",
               width:70, outline:"none", fontWeight:700, textAlign:"center" }} />
           <span style={{ fontSize:11, color:"#90A4AE" }}>weken</span>
-          {einddatum && (
-            <span style={{ fontSize:11, background:"#E8F5E9", color:"#2E7D32",
-              border:"1px solid #A5D6A7", borderRadius:4, padding:"2px 8px", fontWeight:600 }}>
-              → {einddatum}
-            </span>
-          )}
         </div>
+        {einddatum && (
+          <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ fontSize:11, color:"#546E7A" }}>🚚 Datum levering:</span>
+            <span style={{ fontSize:12, background:"#E8F5E9", color:"#2E7D32",
+              border:"1px solid #A5D6A7", borderRadius:4, padding:"3px 10px", fontWeight:700 }}>
+              {einddatum}
+            </span>
+          </div>
+        )}
       </div>
 
       <MedewerkerSelect label="👷 Projectleider" value={leider} onChange={setLeider} />
       <MedewerkerSelect label="👷 Collega" value={collega} onChange={setCollega} />
-      <DatumPicker label="🚚 Datum levering" value={oplevering} onChange={setOplevering} />
 
       <select value={type} onChange={e=>setType(e.target.value)}
         style={{ fontSize:11, padding:"5px 7px", borderRadius:4, border:"1px solid #CE93D8", width:"100%", background:"#fff" }}>
