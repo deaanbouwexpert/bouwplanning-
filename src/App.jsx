@@ -824,7 +824,7 @@ function TeamEditInline({ p, onSave, onClose }) {
 
         {/* ── TAB: ONDERDELEN ── */}
         {tab==="onderdelen" && <>
-          <div style={{ display:"flex", flexDirection:"column", gap:5, maxHeight:"60vh", overflowY:"auto", paddingRight:6 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:8, height:"52vh", overflowY:"scroll", paddingRight:8, paddingBottom:8 }}>
 
             {/* Helper components inline */}
             {(() => {
@@ -836,16 +836,17 @@ function TeamEditInline({ p, onSave, onClose }) {
                     background: aan?"#F0F8FF":"#F9F9F9", overflow:"hidden",
                     }}>
                     <div onClick={()=>setActief(a=>({...a,[col]:!aan}))}
-                      style={{ display:"flex", alignItems:"center", gap:7, padding:"7px 9px", cursor:"pointer" }}>
-                      <div style={{ width:18, height:18, borderRadius:3, flexShrink:0,
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 12px", cursor:"pointer" }}>
+                      <div style={{ width:22, height:22, borderRadius:4, flexShrink:0,
                         background: aan?"#1565C0":"#fff", border: aan?"none":"2px solid #BDBDBD",
                         display:"flex", alignItems:"center", justifyContent:"center",
-                        color:"#fff", fontSize:11, fontWeight:900 }}>{aan?"✓":""}</div>
-                      <span style={{ fontSize:12, fontWeight:600, color: aan?"#1C2B3A":"#90A4AE", flex:1 }}>{col}</span>
-                      <span style={{ fontSize:9, fontWeight:700, color: aan?"#1565C0":"#BDBDBD" }}>{aan?"AAN":"UIT"}</span>
+                        color:"#fff", fontSize:13, fontWeight:900 }}>{aan?"✓":""}</div>
+                      <span style={{ fontSize:13, fontWeight:600, color: aan?"#1C2B3A":"#90A4AE", flex:1 }}>{col}</span>
+                      <span style={{ fontSize:10, fontWeight:700, color: aan?"#1565C0":"#BDBDBD",
+                        background: aan?"#E3F2FD":"#F5F5F5", padding:"2px 8px", borderRadius:3 }}>{aan?"AAN":"UIT"}</span>
                     </div>
                     {aan && children && (
-                      <div style={{ padding:"0 9px 9px 9px", display:"flex", flexDirection:"column", gap:5 }}
+                      <div style={{ padding:"4px 12px 12px 42px", display:"flex", flexDirection:"column", gap:7 }}
                         onClick={e=>e.stopPropagation()}>
                         {children}
                       </div>
@@ -855,22 +856,22 @@ function TeamEditInline({ p, onSave, onClose }) {
               }
               function OField({ label, k, placeholder, type="text", unit }) {
                 return (
-                  <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                    {label && <span style={{ fontSize:10, color:"#546E7A", minWidth:80 }}>{label}</span>}
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    {label && <span style={{ fontSize:12, color:"#546E7A", minWidth:90, fontWeight:500 }}>{label}</span>}
                     <input type={type} value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
                       placeholder={placeholder}
-                      style={{ flex:1, fontSize:11, padding:"3px 6px", borderRadius:4,
+                      style={{ flex:1, fontSize:12, padding:"5px 8px", borderRadius:5,
                         border:"1px solid #CFD8DC", outline:"none", background:"#fff", color:"#1C2B3A" }} />
-                    {unit && <span style={{ fontSize:10, color:"#90A4AE" }}>{unit}</span>}
+                    {unit && <span style={{ fontSize:11, color:"#90A4AE", fontWeight:500 }}>{unit}</span>}
                   </div>
                 );
               }
               function OSelect({ label, k, options }) {
                 return (
-                  <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                    {label && <span style={{ fontSize:10, color:"#546E7A", minWidth:80 }}>{label}</span>}
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    {label && <span style={{ fontSize:12, color:"#546E7A", minWidth:90, fontWeight:500 }}>{label}</span>}
                     <select value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
-                      style={{ flex:1, fontSize:11, padding:"3px 6px", borderRadius:4,
+                      style={{ flex:1, fontSize:12, padding:"5px 8px", borderRadius:5,
                         border:"1px solid #CFD8DC", background:"#fff", color:"#1C2B3A" }}>
                       <option value="">— kies —</option>
                       {options.map(o=><option key={o} value={o}>{o}</option>)}
@@ -881,9 +882,9 @@ function TeamEditInline({ p, onSave, onClose }) {
               function ONote({ k }) {
                 return (
                   <textarea value={ond[k]||""} onChange={e=>ondSet(k,e.target.value)}
-                    placeholder="Notitie..."
+                    placeholder="Notitie / opmerking..."
                     rows={2}
-                    style={{ fontSize:10, padding:"3px 6px", borderRadius:4, border:"1px solid #CFD8DC",
+                    style={{ fontSize:12, padding:"5px 8px", borderRadius:5, border:"1px solid #CFD8DC",
                       outline:"none", resize:"vertical", width:"100%", boxSizing:"border-box", color:"#1C2B3A" }} />
                 );
               }
