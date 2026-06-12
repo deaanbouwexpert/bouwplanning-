@@ -181,12 +181,16 @@ async function loadData(key, fallback) {
 
 async function saveData(key, value) {
   try {
-    await sbFetch("/rest/v1/appdata", "POST", {
+    const result = await sbFetch("/rest/v1/appdata", "POST", {
       key,
       value: JSON.stringify(value),
       updated_at: new Date().toISOString()
     });
-  } catch {}
+    return result !== null;
+  } catch (e) {
+    console.error("saveData error:", e);
+    return false;
+  }
 }
 
 // ── TINY COMPONENTS ───────────────────────────────────────────────────
@@ -689,18 +693,25 @@ function TeamEditInline({ p, onSave, onClose }) {
   const [leider,     setLeider]     = useState(p.leider||"");
   const [collega,    setCollega]    = useState(p.collega||"");
   const [duur,       setDuur]       = useState(p.duur||"");
+  const [startdatum, setStartdatum] = useState(p.date||"");
   const [oplevering, setOplevering] = useState(p.oplevering||"");
   const [type,       setType]       = useState(p.type||"");
+  const [saving,     setSaving]     = useState(false);
+  const [saved,      setSaved]      = useState(false);
 
-  function save() {
-    onSave({ leider, collega, duur, oplevering, type });
-    onClose();
+  async function save() {
+    setSaving(true);
+    await onSave({ leider, collega, duur, date: startdatum, oplevering, type });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => { setSaved(false); onClose(); }, 800);
   }
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:5, marginTop:4,
-      background:"#F0F8FF", borderRadius:7, padding:"8px 8px",
-      border:"1px solid #90CAF9" }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:6, marginTop:4,
+      background:"#F0F8FF", borderRadius:7, padding:"10px",
+      border:"2px solid #90CAF9" }}>
+      <DatumPicker label="📅 Startdatum" value={startdatum} onChange={setStartdatum} />
       <MedewerkerSelect label="👷 Projectleider" value={leider} onChange={setLeider} />
       <MedewerkerSelect label="👷 Collega" value={collega} onChange={setCollega} />
       <div>
@@ -714,9 +725,18 @@ function TeamEditInline({ p, onSave, onClose }) {
         <option value="">— Type project —</option>
         {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
       </select>
-      <button onClick={save}
-        style={{ fontSize:11, background:"#E65100", color:"#fff", border:"none",
-          borderRadius:5, padding:"5px 8px", cursor:"pointer", fontWeight:700 }}>✓ Opslaan</button>
+      <div style={{ display:"flex", gap:6 }}>
+        <button onClick={save} disabled={saving||saved}
+          style={{ flex:1, fontSize:12, fontWeight:800, border:"none", borderRadius:5, padding:"8px",
+            cursor: saving||saved ? "default" : "pointer",
+            background: saved ? "#2E7D32" : saving ? "#FF8A65" : "#E65100",
+            color:"#fff", transition:"background .2s" }}>
+          {saved ? "✓ Opgeslagen!" : saving ? "Opslaan..." : "✓ Opslaan"}
+        </button>
+        <button onClick={onClose}
+          style={{ fontSize:11, background:"#F5F7FA", color:"#546E7A", border:"1px solid #DDE3E9",
+            borderRadius:5, padding:"8px 10px", cursor:"pointer" }}>Annuleer</button>
+      </div>
     </div>
   );
 }
@@ -851,7 +871,14 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
   async function updateTeam(pid, fields) {
     const updated = projects.map(p => p.id===pid ? { ...p, ...fields } : p);
     setProjects(updated);
-    await saveData("bouw_projects", updated);
+    // Save to localStorage immediately as backup
+    try { localStorage.setItem("bouw_projects_backup", JSON.stringify(updated)); } catch {}
+    const ok = await saveData("bouw_projects", updated);
+    if (!ok) {
+      // Retry once
+      await new Promise(r => setTimeout(r, 500));
+      await saveData("bouw_projects", updated);
+    }
   }
 
   async function updateName(pid, val) {
