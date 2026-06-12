@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
 const ADMIN_USER = {
@@ -629,10 +630,39 @@ function MedewerkerSelect({ label, value, onChange, border="1px solid #90CAF9" }
 // ── DATUM PICKER FIELD ────────────────────────────────────────────────
 function DatumPicker({ label, value, onChange }) {
   const [open, setOpen] = useState(false);
+  const [pos,  setPos]  = useRef ? { current: {top:0,left:0} } : { current: {top:0,left:0} };
+  const btnRef = useRef(null);
+  const [calPos, setCalPos] = useState({ top:0, left:0 });
+
+  function toggle() {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      const calH = 265;
+      const spaceBelow = window.innerHeight - r.bottom;
+      const top = spaceBelow < calH
+        ? (r.top - calH - 4 + window.scrollY)
+        : (r.bottom + 4 + window.scrollY);
+      setCalPos({ top, left: r.left + window.scrollX });
+    }
+    setOpen(v => !v);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function handle(e) {
+      if (!e.target.closest("[data-datepicker]")) setOpen(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
+  // Use a portal so the calendar is never clipped by table overflow
+  const portalTarget = typeof document !== "undefined" ? document.body : null;
+
   return (
-    <div style={{ position:"relative" }}>
-      <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>{label}</label>
-      <div onClick={()=>setOpen(v=>!v)}
+    <div data-datepicker="1" style={{ position:"relative" }}>
+      {label && <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>{label}</label>}
+      <div ref={btnRef} onClick={toggle}
         style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 9px", borderRadius:5,
           border:"1px solid #CFD8DC", background:"#fff", cursor:"pointer", fontSize:12,
           color: value ? "#1C2B3A" : "#90A4AE", minWidth:130 }}>
@@ -641,10 +671,14 @@ function DatumPicker({ label, value, onChange }) {
         {value && <button onClick={e=>{ e.stopPropagation(); onChange(""); setOpen(false); }}
           style={{ marginLeft:"auto", background:"none", border:"none", cursor:"pointer", color:"#90A4AE", fontSize:13, lineHeight:1 }}>×</button>}
       </div>
-      {open && (
-        <div style={{ position:"absolute", top:"100%", left:0, zIndex:200, marginTop:2 }}>
+      {open && portalTarget && ReactDOM.createPortal(
+        <div data-datepicker="1"
+          style={{ position:"fixed", top:calPos.top, left:calPos.left, zIndex:9999,
+            boxShadow:"0 8px 32px rgba(0,0,0,.22)", borderRadius:8 }}
+          onMouseDown={e=>e.stopPropagation()}>
           <MiniCalendar value={value} onChange={v=>{ onChange(v); setOpen(false); }} />
-        </div>
+        </div>,
+        portalTarget
       )}
     </div>
   );
