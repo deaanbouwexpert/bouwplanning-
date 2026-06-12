@@ -640,12 +640,19 @@ function DatumPicker({ label, value, onChange }) {
   function openCal() {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      const calH = 265;
+      const calH = 270;
+      const calW = 228;
+      // Always prefer above, fall back to below if not enough space
+      const spaceAbove = r.top;
       const spaceBelow = window.innerHeight - r.bottom;
-      const top = spaceBelow < calH
+      const top = spaceAbove >= calH
         ? (r.top - calH - 4 + window.scrollY)
-        : (r.bottom + 4 + window.scrollY);
-      setCalPos({ top, left: r.left + window.scrollX });
+        : spaceBelow >= calH
+          ? (r.bottom + 4 + window.scrollY)
+          : (r.top - calH - 4 + window.scrollY);
+      // Keep within horizontal bounds
+      const left = Math.min(r.left + window.scrollX, window.innerWidth - calW - 8 + window.scrollX);
+      setCalPos({ top, left: Math.max(4, left) });
     }
     setOpen(true);
   }
