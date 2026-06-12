@@ -869,8 +869,14 @@ function TeamEditInline({ p, onSave, onClose }) {
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}
                     onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}>
                     {label && <span style={{ fontSize:11, color:"#546E7A", minWidth:70, flexShrink:0 }}>{label}</span>}
-                    <input type={type} value={ond[k]||""} onChange={e=>{ e.stopPropagation(); ondSet(k,e.target.value); }}
-                      onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}
+                    <input type={type} value={ond[k]||""}
+                      onChange={e=>ondSet(k,e.target.value)}
+                      onKeyDown={e=>e.stopPropagation()}
+                      onKeyUp={e=>e.stopPropagation()}
+                      onKeyPress={e=>e.stopPropagation()}
+                      onClick={e=>e.stopPropagation()}
+                      onMouseDown={e=>e.stopPropagation()}
+                      onFocus={e=>e.stopPropagation()}
                       placeholder={placeholder}
                       style={{ flex:1, fontSize:11, padding:"4px 7px", borderRadius:4, minWidth:0,
                         border:"1px solid #CFD8DC", outline:"none", background:"#fff", color:"#1C2B3A",
@@ -884,8 +890,11 @@ function TeamEditInline({ p, onSave, onClose }) {
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}
                     onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}>
                     {label && <span style={{ fontSize:11, color:"#546E7A", minWidth:70, flexShrink:0 }}>{label}</span>}
-                    <select value={ond[k]||""} onChange={e=>{ e.stopPropagation(); ondSet(k,e.target.value); }}
-                      onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}
+                    <select value={ond[k]||""}
+                      onChange={e=>ondSet(k,e.target.value)}
+                      onClick={e=>e.stopPropagation()}
+                      onMouseDown={e=>e.stopPropagation()}
+                      onFocus={e=>e.stopPropagation()}
                       style={{ flex:1, fontSize:11, padding:"4px 7px", borderRadius:4,
                         border:"1px solid #CFD8DC", background:"#fff", color:"#1C2B3A", minWidth:0 }}>
                       <option value="">— kies —</option>
@@ -896,12 +905,20 @@ function TeamEditInline({ p, onSave, onClose }) {
               }
               function ONote({ k }) {
                 return (
-                  <textarea value={ond[k]||""} onChange={e=>{ e.stopPropagation(); ondSet(k,e.target.value); }}
-                    onClick={e=>e.stopPropagation()} onMouseDown={e=>e.stopPropagation()}
+                  <textarea
+                    value={ond[k]||""}
+                    onChange={e=>ondSet(k,e.target.value)}
+                    onKeyDown={e=>e.stopPropagation()}
+                    onKeyUp={e=>e.stopPropagation()}
+                    onKeyPress={e=>e.stopPropagation()}
+                    onClick={e=>e.stopPropagation()}
+                    onMouseDown={e=>e.stopPropagation()}
+                    onFocus={e=>e.stopPropagation()}
                     placeholder="Notitie..."
                     rows={2}
                     style={{ fontSize:11, padding:"4px 7px", borderRadius:4, border:"1px solid #CFD8DC",
-                      outline:"none", resize:"vertical", width:"100%", boxSizing:"border-box", color:"#1C2B3A" }} />
+                      outline:"none", resize:"vertical", width:"100%", boxSizing:"border-box",
+                      color:"#1C2B3A", background:"#fff", display:"block" }} />
                 );
               }
 
