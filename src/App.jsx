@@ -3432,7 +3432,12 @@ function clearSession() {
 export default function App() {
   const [projects,         setProjects]         = useState(null);
   const [logs,             setLogs]             = useState([]);
-  const [tab,              setTab]              = useState("checklist");
+  const [tab,              setTab]              = useState(() => localStorage.getItem("bouw_tab") || "checklist");
+
+  function setTabAndSave(t) {
+    localStorage.setItem("bouw_tab", t);
+    setTab(t);
+  }
   const [loading,          setLoading]          = useState(true);
   const [highlightProject, setHighlightProject] = useState(null);
   const [currentUser,      setCurrentUser]      = useState(() => loadSession());
@@ -3440,7 +3445,7 @@ export default function App() {
   const [showAdmin,        setShowAdmin]        = useState(false);
 
   function goToProject(pid) {
-    setTab("checklist");
+    setTabAndSave("checklist");
     setHighlightProject(pid);
   }
 
@@ -3561,7 +3566,7 @@ export default function App() {
           borderTop:"1px solid rgba(255,255,255,.1)",
           WebkitOverflowScrolling:"touch", scrollbarWidth:"none" }}>
           {TABS.map(t => (
-            <button key={t.key} onClick={()=>setTab(t.key)}
+            <button key={t.key} onClick={()=>setTabAndSave(t.key)}
               style={{ background:tab===t.key?"#E65100":"transparent",
                 border:"none", color:"#fff", padding:"6px 12px", borderRadius:6,
                 fontWeight:tab===t.key?700:400, cursor:"pointer", fontSize:11,
