@@ -2575,12 +2575,14 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
       </div>
 
       {/* GANTT */}
-      <div ref={ganttRef}
-        style={{overflowY:"auto",maxHeight:"calc(100vh - 260px)",
-          borderRadius:10,border:"1px solid #DDE3E9",
-          boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
       <div ref={scrollRef}
-        style={{overflowX:"scroll",background:"#fff"}}>
+        style={{overflow:"scroll",
+          maxHeight:"calc(100vh - 260px)",
+          borderRadius:10,border:"1px solid #DDE3E9",
+          boxShadow:"0 2px 12px rgba(0,0,0,.07)",
+          background:"#fff"}}>
+      <div ref={ganttRef}
+        style={{background:"#fff"}}>
 
         <div style={{minWidth:NAME_W+totalW}}>
 
