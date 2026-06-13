@@ -1363,6 +1363,7 @@ function NieuwProjectForm({ onSave, onCancel }) {
 // ── CHECKLIST ─────────────────────────────────────────────────────────
 function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, clearHighlight }) {
   const [editing,   setEditing]   = useState(null);
+  const [editPos,   setEditPos]   = useState({ top:0, left:0 });
   const [search,    setSearch]    = useState("");
   const [filter,    setFilter]    = useState("");
   const [openMonth, setOpenMonth] = useState(null);
@@ -1597,12 +1598,20 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
             <td key={ci} style={{ ...TD, textAlign:"center", position:"relative",
               minWidth:88, cursor: canEdit && !p.afgerond && isActief ? "pointer" : "default",
               background: !isActief ? "#F5F5F5" : "inherit", opacity: !isActief ? 0.4 : 1 }}
-              onClick={()=>{ if(canEdit && !p.afgerond && !isOpen && isActief) setEditing({pid:p.id,col:ci}); }}>
+              onClick={e=>{ if(canEdit && !p.afgerond && !isOpen && isActief) {
+                const r = e.currentTarget.getBoundingClientRect();
+                const popW = 250, popH = 320;
+                const left = Math.min(r.left + window.scrollX, window.innerWidth - popW - 8);
+                const top = r.top + window.scrollY - popH - 4 < 0
+                  ? r.bottom + window.scrollY + 4
+                  : r.top + window.scrollY - popH - 4;
+                setEditPos({ top, left: Math.max(4, left) });
+                setEditing({pid:p.id,col:ci});
+              }}}>
               {!isActief ? (
                 <span style={{ fontSize:10, color:"#BDBDBD", fontWeight:600 }}>—</span>
               ) : isOpen ? (
                 (() => {
-                  // local refs for unsaved uitvoerder text
                   const uitvRef = useRef(null);
                   const [showCal, setShowCal] = useState(false);
 
@@ -1614,9 +1623,11 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                     setEditing(null);
                   }
 
-                  return (
-                    <div style={{ position:"absolute", top:0, left:"50%", transform:"translateX(-50%)",
-                      zIndex:100, background:"#fff", borderRadius:10,
+                  return ReactDOM.createPortal(
+                    <div style={{ position:"fixed", inset:0, zIndex:9990 }}
+                      onClick={()=>setEditing(null)}>
+                    <div style={{ position:"fixed", top:editPos.top, left:editPos.left,
+                      zIndex:9991, background:"#fff", borderRadius:10,
                       boxShadow:"0 8px 32px rgba(0,0,0,.25)",
                       border:"2px solid #E65100", padding:10, minWidth:220, maxWidth:250 }}
                       onClick={e=>e.stopPropagation()}>
@@ -1724,6 +1735,8 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                       </button>
 
                     </div>
+                    </div>,
+                    document.body
                   );
                 })()
               ) : (
