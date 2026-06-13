@@ -2713,67 +2713,156 @@ function Tijdschema({ projects, setProjects }) {
         </span>
       </div>
 
-      {/* ── GANTT ── */}
-      <div style={{ overflowX:"auto", borderRadius:10,
-        border:"1px solid #DDE3E9", boxShadow:"0 2px 12px rgba(0,0,0,.07)",
-        background:"#fff", cursor:"grab", userSelect:"none" }}
-        onMouseDown={e=>{
-          if (isDraggingBar.current) return;
-          // Don't scroll if clicking on a bar (target has cursor:grab style)
-          if (e.target.closest && e.target.closest('[data-gantt-bar]')) return;
-          const el=e.currentTarget; let sx=e.pageX+el.scrollLeft;
-          const mv=ev=>{ if(isDraggingBar.current) return; el.scrollLeft=sx-ev.pageX; };
-          const up=()=>{ document.removeEventListener("mousemove",mv); document.removeEventListener("mouseup",up); el.style.cursor="grab"; };
-          el.style.cursor="grabbing";
-          document.addEventListener("mousemove",mv);
-          document.addEventListener("mouseup",up);
-        }}>
+      {/* ── GANTT — split layout: sticky names + scrollable timeline ── */}
+      <div style={{ display:"flex", borderRadius:10, border:"1px solid #DDE3E9",
+        boxShadow:"0 2px 12px rgba(0,0,0,.07)", background:"#fff", overflow:"hidden" }}>
 
-        <div style={{ width:totalWidth, minWidth:totalWidth }}>
+        {/* LEFT: fixed name column */}
+        <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
+          borderRight:"3px solid #DDE3E9", zIndex:10, background:"#fff" }}>
 
-          {/* ── HEADER ROW 1 — groups (month/year spans) ── */}
-          <div style={{ display:"flex", background:"#0D1B2A", color:"#fff",
-            borderBottom:"1px solid #1C2B3A" }}>
-            <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
-              padding:"4px 10px", fontWeight:800, fontSize:11, letterSpacing:.3 }}>
-              🏗️ Project / Team
-            </div>
-            {headerGroups.map((g,i) => (
-              <div key={i} style={{ width:g.count*COL_W, flexShrink:0, textAlign:"center",
-                padding:"3px 2px", fontWeight:800, fontSize:11,
-                borderLeft:"2px solid #1C2B3A" }}>
-                {g.label}
-              </div>
-            ))}
+          {/* header top */}
+          <div style={{ background:"#0D1B2A", color:"#fff", padding:"4px 10px",
+            fontWeight:800, fontSize:11, height:22, display:"flex", alignItems:"center" }}>
+            🏗️ Project / Team
+          </div>
+          {/* header bottom */}
+          <div style={{ background:"#1C2B3A", color:"#90A4AE", padding:"3px 10px",
+            fontSize:9, fontWeight:600, height:22, display:"flex", alignItems:"center",
+            borderBottom:"2px solid #0D1B2A" }}>
+            ✏️ klik naam / 👷 leider
           </div>
 
-          {/* ── HEADER ROW 2 — individual cols ── */}
-          <div style={{ display:"flex", background:"#1C2B3A", color:"#fff",
-            borderBottom:"2px solid #0D1B2A", position:"sticky", top:0, zIndex:5 }}>
-            <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
-              padding:"3px 10px", fontSize:9, color:"#90A4AE", fontWeight:600 }}>
-              ↔ sleep
-            </div>
-            {cols.map((c,i) => (
-              <div key={i} style={{ width:COL_W, minWidth:COL_W, flexShrink:0,
-                textAlign:"center", padding:"3px 1px",
-                background: c.isToday ? "#E65100" : (c.isWeekend ? "#263547" : "#1C2B3A"),
-                borderLeft: i===0 ? "none" : "1px solid #263547",
-                fontSize:10, fontWeight:c.isToday?800:500,
-                color: c.isToday?"#fff":(c.isWeekend?"#90A4AE":"#fff") }}>
-                <div style={{ fontWeight:700 }}>{c.label}</div>
-                {c.subLabel && viewMode!=="month" && viewMode!=="year" &&
-                  <div style={{ fontSize:8, opacity:.7 }}>{c.subLabel}</div>}
-              </div>
-            ))}
-          </div>
-
-          {/* ── PROJECT ROWS ── */}
+          {/* name rows */}
           {visibleProjects.length === 0 ? (
-            <div style={{ padding:40, textAlign:"center", color:"#90A4AE", fontSize:13 }}>
-              Geen projecten zichtbaar in deze periode
-            </div>
+            <div style={{ padding:20, color:"#90A4AE", fontSize:12 }}>Geen projecten</div>
           ) : visibleProjects.map((p, pi) => {
+            const color = PROJ_COLORS[pi % PROJ_COLORS.length];
+            const typeInfo = PROJECT_TYPES.find(t=>t.label===p.type);
+            const hasOverlap = overlapSet.has(p.id);
+            const defaultWeken = p.type==="Dakopbouw" ? 8 : p.type==="Dakkapel" ? 1 : 4;
+            const wekenNum = parseInt(p.weken)||defaultWeken;
+            return (
+              <div key={p.id}
+                style={{ display:"flex", alignItems:"center", height:ROW_H+6,
+                  borderBottom:"1px solid #F0F2F5", padding:"2px 6px",
+                  background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
+                  borderLeft: hasOverlap?"3px solid #E53935":"3px solid "+color }}>
+                <div style={{ flex:1, overflow:"hidden" }}>
+                  {editNaam===p.id ? (
+                    <input autoFocus defaultValue={p.name}
+                      style={{ width:"100%", fontSize:10, fontWeight:700, padding:"1px 4px",
+                        borderRadius:3, border:"1px solid #E65100", outline:"none", boxSizing:"border-box" }}
+                      onKeyDown={e=>{ if(e.key==="Enter") saveNaam(p.id,e.target.value); if(e.key==="Escape") setEditNaam(null); }}
+                      onBlur={e=>saveNaam(p.id,e.target.value)} />
+                  ) : (
+                    <div onClick={()=>setEditNaam(p.id)} title="Klik om naam te wijzigen"
+                      style={{ fontWeight:700, fontSize:10, color:"#1C2B3A", cursor:"text",
+                        whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                      {p.name}
+                    </div>
+                  )}
+                  <div style={{ display:"flex", gap:3, alignItems:"center", flexWrap:"nowrap", marginTop:1 }}>
+                    {typeInfo && (
+                      <span style={{ fontSize:8, fontWeight:700, flexShrink:0,
+                        background:typeInfo.bg, color:typeInfo.text,
+                        border:`1px solid ${typeInfo.border}`,
+                        borderRadius:3, padding:"0px 4px" }}>
+                        {typeInfo.label}
+                      </span>
+                    )}
+                    {editWeken===p.id ? (
+                      <input defaultValue={wekenNum} autoFocus type="number" min="1" max="52"
+                        style={{ width:36, fontSize:9, padding:"1px 3px", borderRadius:3,
+                          border:"1px solid #E65100", outline:"none", textAlign:"center" }}
+                        onKeyDown={e=>{ if(e.key==="Enter") saveWeken(p.id,e.target.value); if(e.key==="Escape") setEditWeken(null); }}
+                        onBlur={e=>saveWeken(p.id,e.target.value)} />
+                    ) : (
+                      <span onClick={e=>{ e.stopPropagation(); setEditWeken(p.id); }}
+                        title="Klik om weken te wijzigen"
+                        style={{ fontSize:9, color:"#fff", flexShrink:0,
+                          background: p.type==="Dakopbouw"?"#6A1B9A": p.type==="Dakkapel"?"#2E7D32":color,
+                          borderRadius:3, padding:"1px 5px", cursor:"pointer", fontWeight:700 }}>
+                        {wekenNum}w
+                      </span>
+                    )}
+                    {hasOverlap && <span style={{ fontSize:9, color:"#B71C1C", fontWeight:800 }}>⚠️</span>}
+                    {editLeider===p.id ? (
+                      <select autoFocus value={p.leider||""}
+                        onChange={e=>saveLeider(p.id,e.target.value)}
+                        onBlur={()=>setEditLeider(null)}
+                        style={{ fontSize:9, borderRadius:3, border:"1px solid #90CAF9",
+                          padding:"1px 3px", background:"#fff", maxWidth:90 }}>
+                        <option value="">— geen —</option>
+                        {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
+                      </select>
+                    ) : (
+                      <span onClick={e=>{ e.stopPropagation(); setEditLeider(p.id); }}
+                        title="Klik om projectleider te wijzigen"
+                        style={{ fontSize:9, color: p.leider?"#546E7A":"#BDBDBD",
+                          cursor:"pointer", whiteSpace:"nowrap", overflow:"hidden",
+                          textOverflow:"ellipsis", maxWidth:80 }}>
+                        {p.leider ? `👷 ${p.leider}` : "+ leider"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* RIGHT: scrollable timeline */}
+        <div style={{ flex:1, overflowX:"auto", cursor:"grab", userSelect:"none" }}
+          ref={el => { if(el && !el._dragSetup) { el._dragSetup=true;
+            el.addEventListener("mousedown", function(e) {
+              if(isDraggingBar.current) return;
+              if(e.target.closest && e.target.closest("[data-gantt-bar]")) return;
+              let sx = e.pageX + el.scrollLeft;
+              function mv(ev) { if(isDraggingBar.current) return; el.scrollLeft = sx - ev.pageX; el.style.cursor="grabbing"; }
+              function up() { document.removeEventListener("mousemove",mv); document.removeEventListener("mouseup",up); el.style.cursor="grab"; }
+              document.addEventListener("mousemove", mv);
+              document.addEventListener("mouseup", up);
+            });
+          }}}>
+
+          <div style={{ width: cols.length * COL_W, minWidth: cols.length * COL_W }}>
+
+            {/* header row 1 — month spans */}
+            <div style={{ display:"flex", background:"#0D1B2A", color:"#fff", height:22 }}>
+              {headerGroups.map((g,i) => (
+                <div key={i} style={{ width:g.count*COL_W, flexShrink:0, textAlign:"center",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontWeight:800, fontSize:11, borderLeft: i>0?"2px solid #1C2B3A":"none" }}>
+                  {g.label}
+                </div>
+              ))}
+            </div>
+
+            {/* header row 2 — individual cols */}
+            <div style={{ display:"flex", background:"#1C2B3A", color:"#fff",
+              borderBottom:"2px solid #0D1B2A", height:22 }}>
+              {cols.map((c,i) => (
+                <div key={i} style={{ width:COL_W, minWidth:COL_W, flexShrink:0,
+                  textAlign:"center", padding:"2px 1px",
+                  background: c.isToday?"#E65100":(c.isWeekend?"#263547":"#1C2B3A"),
+                  borderLeft: i===0?"none":"1px solid #263547",
+                  fontSize:10, fontWeight:c.isToday?800:500,
+                  color: c.isToday?"#fff":(c.isWeekend?"#90A4AE":"#fff"),
+                  display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                  <div style={{ fontWeight:700, lineHeight:1.1 }}>{c.label}</div>
+                  {c.subLabel && viewMode!=="month" && viewMode!=="year" &&
+                    <div style={{ fontSize:8, opacity:.7 }}>{c.subLabel}</div>}
+                </div>
+              ))}
+            </div>
+
+            {/* project bar rows */}
+            {visibleProjects.length === 0 ? (
+              <div style={{ padding:40, textAlign:"center", color:"#90A4AE", fontSize:13 }}>
+                Geen projecten zichtbaar in deze periode
+              </div>
+            ) : visibleProjects.map((p, pi) => {
             const bar   = getBar(p);
             const color = PROJ_COLORS[pi % PROJ_COLORS.length];
             const typeInfo = PROJECT_TYPES.find(t=>t.label===p.type);
@@ -2783,148 +2872,66 @@ function Tijdschema({ projects, setProjects }) {
 
             return (
               <div key={p.id}
-                style={{ display:"flex", alignItems:"stretch", minHeight:ROW_H,
-                  background: hasOverlap ? "#FFF5F5" : pi%2===0?"#FAFBFC":"#fff",
-                  borderBottom: hasOverlap ? "1px solid #FFCDD2" : "none",
-                  borderLeft: hasOverlap ? "3px solid #E53935" : "none" }}
+                style={{ position:"relative", height:ROW_H+6, display:"flex", alignItems:"center",
+                  background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
+                  borderBottom:"1px solid #F0F2F5" }}
                 onMouseEnter={e=>e.currentTarget.style.background=hasOverlap?"#FFEBEE":"#EBF3FF"}
                 onMouseLeave={e=>e.currentTarget.style.background=hasOverlap?"#FFF5F5":pi%2===0?"#FAFBFC":"#fff"}>
 
-                {/* project name cell */}
-                <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
-                  borderRight:"2px solid #DDE3E9", padding:"2px 6px",
-                  display:"flex", alignItems:"center", gap:5 }}>
-                  <div style={{ width:3, alignSelf:"stretch", background:color,
-                    borderRadius:1, flexShrink:0 }}/>
-                  <div style={{ flex:1, overflow:"hidden" }}>
-                    {/* Naam — klik om te bewerken */}
-                    {editNaam===p.id ? (
-                      <input autoFocus defaultValue={p.name}
-                        style={{ width:"100%", fontSize:10, fontWeight:700, padding:"1px 4px",
-                          borderRadius:3, border:"1px solid #E65100", outline:"none", boxSizing:"border-box" }}
-                        onKeyDown={e=>{ if(e.key==="Enter") saveNaam(p.id,e.target.value); if(e.key==="Escape") setEditNaam(null); }}
-                        onBlur={e=>saveNaam(p.id,e.target.value)} />
-                    ) : (
-                      <div onClick={()=>setEditNaam(p.id)}
-                        title="Klik om naam te wijzigen"
-                        style={{ fontWeight:700, fontSize:10, color:"#1C2B3A", cursor:"text",
-                          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
-                          lineHeight:1.3, borderBottom:"1px dashed transparent" }}
-                        onMouseEnter={e=>e.currentTarget.style.borderBottomColor="#BDBDBD"}
-                        onMouseLeave={e=>e.currentTarget.style.borderBottomColor="transparent"}>
-                        {p.name}
-                      </div>
-                    )}
-                    <div style={{ display:"flex", gap:3, alignItems:"center", flexWrap:"wrap", marginTop:1 }}>
-                      {typeInfo && (
-                        <span style={{ fontSize:8, fontWeight:700,
-                          background:typeInfo.bg, color:typeInfo.text,
-                          border:`1px solid ${typeInfo.border}`,
-                          borderRadius:3, padding:"0px 4px" }}>
-                          {typeInfo.label}
-                        </span>
-                      )}
-                      {/* weken badge */}
-                      {editWeken===p.id ? (
-                        <input defaultValue={wekenNum} autoFocus type="number" min="1" max="52"
-                          style={{ width:36, fontSize:9, padding:"1px 3px", borderRadius:3,
-                            border:"1px solid #E65100", outline:"none", textAlign:"center" }}
-                          onKeyDown={e=>{ if(e.key==="Enter") saveWeken(p.id,e.target.value); if(e.key==="Escape") setEditWeken(null); }}
-                          onBlur={e=>saveWeken(p.id,e.target.value)} />
-                      ) : (
-                        <span onClick={e=>{ e.stopPropagation(); setEditWeken(p.id); }}
-                          title="Klik om weken aan te passen"
-                          style={{ fontSize:9, color:"#fff",
-                            background: p.type==="Dakopbouw"?"#6A1B9A": p.type==="Dakkapel"?"#2E7D32":color,
-                            borderRadius:3, padding:"1px 5px", cursor:"pointer", fontWeight:700 }}>
-                          {wekenNum}w
-                        </span>
-                      )}
-                      {hasOverlap && <span style={{ fontSize:9, color:"#B71C1C", fontWeight:800 }}>⚠️</span>}
-                      {/* Leider — klik om te wijzigen */}
-                      {editLeider===p.id ? (
-                        <select autoFocus value={p.leider||""}
-                          onChange={e=>saveLeider(p.id,e.target.value)}
-                          onBlur={()=>setEditLeider(null)}
-                          style={{ fontSize:9, borderRadius:3, border:"1px solid #90CAF9",
-                            padding:"1px 3px", background:"#fff", maxWidth:90 }}>
-                          <option value="">— geen —</option>
-                          {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
-                        </select>
-                      ) : (
-                        <span onClick={e=>{ e.stopPropagation(); setEditLeider(p.id); }}
-                          title="Klik om projectleider te wijzigen"
-                          style={{ fontSize:9, color:"#546E7A", cursor:"pointer",
-                            whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:80,
-                            borderBottom:"1px dashed transparent" }}
-                          onMouseEnter={e=>e.currentTarget.style.borderBottomColor="#BDBDBD"}
-                          onMouseLeave={e=>e.currentTarget.style.borderBottomColor="transparent"}>
-                          {p.leider ? `👷 ${p.leider}` : <span style={{color:"#BDBDBD"}}>+ leider</span>}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                {/* column backgrounds */}
+                {cols.map((c,ci) => (
+                  <div key={ci} style={{ width:COL_W, minWidth:COL_W, flexShrink:0, height:"100%",
+                    background: c.isToday?"rgba(230,81,0,.07)":(c.isWeekend?"rgba(0,0,0,.025)":"transparent"),
+                    borderLeft: c.isToday?"2px solid rgba(230,81,0,.4)":"1px solid #F0F2F5",
+                    position:"absolute", left:ci*COL_W, top:0 }}/>
+                ))}
 
-                {/* gantt bar cells */}
-                <div style={{ display:"flex", flex:1, position:"relative", alignItems:"center" }}>
-                  {cols.map((c,ci) => (
-                    <div key={ci} style={{ width:COL_W, minWidth:COL_W, flexShrink:0, height:"100%",
-                      background: c.isToday ? "rgba(230,81,0,.07)" : (c.isWeekend ? "rgba(0,0,0,.025)" : "transparent"),
-                      borderLeft: c.isToday ? "2px solid rgba(230,81,0,.4)" : "1px solid #F0F2F5",
-                      boxSizing:"border-box" }}/>
-                  ))}
-
-                  {/* the actual gantt bar — draggable */}
-                  {bar && (() => {
-                    const left  = bar.startIdx * COL_W + bar.startFrac * COL_W;
-                    const right = (cols.length - bar.endIdx - 1) * COL_W + (1 - bar.endFrac) * COL_W;
-                    const width = totalWidth - NAME_W - left - right;
-                    const isDragging = dragging?.pid === p.id;
-                    return (
-                      <div
-                        data-gantt-bar="1"
-                        onMouseDown={e=>{ e.stopPropagation(); startDrag(e, p); }}
-                        style={{ position:"absolute", left, width: Math.max(width,4),
-                          top:"50%", transform:"translateY(-50%)",
-                          height:ROW_H-2, borderRadius:3,
-                          background:`linear-gradient(90deg, ${color}, ${color}cc)`,
-                          boxShadow: isDragging ? `0 4px 16px ${color}99` : `0 2px 6px ${color}55`,
-                          display:"flex", alignItems:"center",
-                          overflow:"hidden",
-                          cursor:"grab",
-                          opacity: isDragging ? 0.85 : 1,
-                          outline: isDragging ? `2px solid ${color}` : "none",
-                          transition: isDragging ? "none" : "box-shadow .15s" }}
-                        title={`${p.name} · ${p.date} · ${wekenNum} weken${p.leider?" · 👷 "+p.leider:""}
+                {/* gantt bar */}
+                {bar && (() => {
+                  const left = bar.startIdx*COL_W + bar.startFrac*COL_W;
+                  const right = (cols.length - bar.endIdx - 1)*COL_W + (1-bar.endFrac)*COL_W;
+                  const width = cols.length*COL_W - left - right;
+                  const isDragging = dragging?.pid === p.id;
+                  return (
+                    <div data-gantt-bar="1"
+                      onMouseDown={e=>{ e.stopPropagation(); startDrag(e, p); }}
+                      style={{ position:"absolute", left, width:Math.max(width,6),
+                        top:"50%", transform:"translateY(-50%)",
+                        height:ROW_H, borderRadius:4,
+                        background:`linear-gradient(90deg, ${color}ee, ${color}bb)`,
+                        boxShadow: isDragging?`0 4px 16px ${color}99`:`0 2px 6px ${color}44`,
+                        display:"flex", alignItems:"center", overflow:"visible",
+                        cursor:"grab", zIndex:2,
+                        opacity: isDragging?0.9:1,
+                        outline: isDragging?`2px solid ${color}`:"none" }}
+                      title={`${p.name} · ${p.date} · ${wekenNum}w
 ↔ Sleep om datum te verschuiven`}>
-                        {/* date label while dragging */}
-                        {isDragging && (
-                          <span style={{ position:"absolute", top:-18, left:0,
-                            background:"#1C2B3A", color:"#fff", fontSize:9, fontWeight:700,
-                            padding:"2px 6px", borderRadius:3, whiteSpace:"nowrap", zIndex:10 }}>
-                            📅 {p.date}
-                          </span>
-                        )}
-                        {width > 50 && (
-                          <span style={{ fontSize:9, color:"#fff", fontWeight:700,
-                            paddingLeft:8, whiteSpace:"nowrap", overflow:"hidden",
-                            textOverflow:"ellipsis", maxWidth:width-20, pointerEvents:"none" }}>
-                            {p.typeLabel ? `${p.typeLabel} · ${p.name.split(" ")[0]}` : p.name.split(" ").slice(0,2).join(" ")}
-                          </span>
-                        )}
-                        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:5,
-                          background:"rgba(255,255,255,.5)", borderRadius:"5px 0 0 5px",
-                          cursor:"ew-resize" }}/>
-                        <div style={{ position:"absolute", right:0, top:0, bottom:0, width:5,
-                          background:"rgba(0,0,0,.2)", borderRadius:"0 5px 5px 0" }}/>
-                      </div>
-                    );
-                  })()}
-                </div>
+                      {isDragging && (
+                        <span style={{ position:"absolute", top:-20, left:0, zIndex:20,
+                          background:"#1C2B3A", color:"#fff", fontSize:9, fontWeight:700,
+                          padding:"2px 7px", borderRadius:4, whiteSpace:"nowrap",
+                          boxShadow:"0 2px 8px rgba(0,0,0,.3)" }}>
+                          📅 {p.date}
+                        </span>
+                      )}
+                      {width > 40 && (
+                        <span style={{ fontSize:9, color:"#fff", fontWeight:700,
+                          paddingLeft:7, whiteSpace:"nowrap", overflow:"hidden",
+                          textOverflow:"ellipsis", maxWidth:width-14, pointerEvents:"none" }}>
+                          {p.name.split(" ").slice(0,2).join(" ")}
+                        </span>
+                      )}
+                      <div style={{ position:"absolute", left:0, top:0, bottom:0, width:6,
+                        background:"rgba(255,255,255,.45)", borderRadius:"4px 0 0 4px" }}/>
+                      <div style={{ position:"absolute", right:0, top:0, bottom:0, width:6,
+                        background:"rgba(0,0,0,.15)", borderRadius:"0 4px 4px 0" }}/>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
+          </div>
         </div>
       </div>
 
