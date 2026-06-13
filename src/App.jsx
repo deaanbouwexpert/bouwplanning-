@@ -2338,7 +2338,7 @@ const PROJ_COLORS = [
 function Tijdschema({ projects, setProjects, updateTeam }) {
   const today      = new Date();
   const [viewMode, setViewMode] = useState("month");
-  const [anchor,   setAnchor]   = useState(() => { const d=new Date(today); d.setDate(1); return d; });
+  const [anchor,   setAnchor]   = useState(() => new Date(2026, 0, 1));
   const [search,   setSearch]   = useState("");
   const [filterType,    setFilterType]    = useState("");
   const [filterLeider,  setFilterLeider]  = useState("");
@@ -2366,14 +2366,14 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
   // Build columns
   function buildCols() {
     if (viewMode==="day") {
-      return Array.from({length:60},(_,i)=>{ const d=addDays(anchor,i); const wd=d.getDay();
+      return Array.from({length:180},(_,i)=>{ const d=addDays(anchor,i); const wd=d.getDay();
         return { label:`${d.getDate()}-${d.getMonth()+1}`, sub:["Zo","Ma","Di","Wo","Do","Vr","Za"][wd],
           start:new Date(d.setHours(0,0,0,0)), end:new Date(d.setHours(23,59,59,999)),
           isWeekend:wd===0||wd===6, isToday:d.toDateString()===today.toDateString() }; });
     }
     if (viewMode==="week") {
       const mon=startOfWeek(anchor);
-      return Array.from({length:26},(_,i)=>{ const s=addDays(mon,i*7); const e=addDays(s,6);
+      return Array.from({length:78},(_,i)=>{ const s=addDays(mon,i*7); const e=addDays(s,6);
         const wn=Math.ceil((((s-new Date(s.getFullYear(),0,1))/86400000)+1)/7);
         return { label:`W${wn}`, sub:`${fmtD(s)}`, start:s, end:e, isWeekend:false, isToday:today>=s&&today<=e }; });
     }
@@ -2436,8 +2436,8 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
       const {start,end}=cols[i];
       if(today>=start&&today<=end){ const f=(today-start)/(end-start+1); x=i*COL_W+f*COL_W; break; }
     }
-    el.scrollLeft=Math.max(0,x-el.clientWidth/2);
-  },[viewMode,anchor]);
+    el.scrollLeft=Math.max(0,x-el.clientWidth/2+NAME_W/2);
+  },[viewMode]);
 
   // Save functions
   async function saveWeken(pid,val){
@@ -2487,7 +2487,17 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
               return (
                 <button key={m} onClick={()=>{
                   setViewMode("month");
-                  setAnchor(new Date(y,mi,1));
+                  // Scroll horizontally to this month
+                  setTimeout(()=>{
+                    const el = scrollRef.current; if(!el) return;
+                    // find column index for this month
+                    const targetDate = new Date(y,mi,1);
+                    let x=0;
+                    for(let i=0;i<cols.length;i++){
+                      if(cols[i].start.getFullYear()===y && cols[i].start.getMonth()===mi){ x=i*COL_W; break; }
+                    }
+                    el.scrollLeft = Math.max(0, x);
+                  }, 30);
                   // Scroll gantt vertically to first project of this month
                   setTimeout(()=>{
                     const el = ganttRef.current;
@@ -2540,11 +2550,14 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
         <button onClick={()=>navigate(-1)} style={{background:"#1C2B3A",color:"#fff",border:"none",
           borderRadius:6,padding:"6px 14px",cursor:"pointer",fontWeight:700,fontSize:14}}>◀</button>
         <button onClick={()=>{
-            const d = new Date(today);
-            if (viewMode==="day")   { setAnchor(new Date(d.getFullYear(),d.getMonth(),d.getDate())); }
-            else if (viewMode==="week")  { setAnchor(startOfWeek(d)); }
-            else if (viewMode==="month") { setAnchor(new Date(d.getFullYear(),d.getMonth(),1)); }
-            else { setAnchor(new Date(d.getFullYear(),0,1)); }
+            const el = scrollRef.current; if(!el) return;
+            // Find today position in cols
+            let x=0;
+            for(let i=0;i<cols.length;i++){
+              const {start,end}=cols[i];
+              if(today>=start&&today<=end){ x=i*COL_W+(today-start)/(end-start+1)*COL_W; break; }
+            }
+            el.scrollLeft = Math.max(0, x - el.clientWidth/2 + NAME_W);
           }}
           style={{background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80",
             borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>
