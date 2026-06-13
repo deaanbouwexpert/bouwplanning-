@@ -2342,9 +2342,12 @@ function Tijdschema({ projects, setProjects }) {
     d.setDate(1);
     return d;
   });
-  const [editWeken, setEditWeken] = useState(null);
-  const [filterType, setFilterType] = useState("");
-  const [search, setSearch] = useState("");
+  const [editWeken,    setEditWeken]    = useState(null);
+  const [editNaam,     setEditNaam]     = useState(null);  // pid being name-edited
+  const [editLeider,   setEditLeider]   = useState(null);  // pid being leider-edited
+  const [filterType,   setFilterType]   = useState("");
+  const [search,       setSearch]       = useState("");
+  const [dragging,     setDragging]     = useState(null);  // { pid, startX, origDate }
 
   // ── Date helpers ────────────────────────────────────────────────────
   function parseD(str = "") {
@@ -2484,6 +2487,71 @@ function Tijdschema({ projects, setProjects }) {
     setProjects(updated);
     await saveData("bouw_projects", updated);
     setEditWeken(null);
+  }
+
+  async function saveNaam(pid, val) {
+    if (!val.trim()) { setEditNaam(null); return; }
+    const updated = projects.map(p => p.id===pid ? {...p, name: val.trim()} : p);
+    setProjects(updated);
+    await saveData("bouw_projects", updated);
+    setEditNaam(null);
+  }
+
+  async function saveLeider(pid, val) {
+    const updated = projects.map(p => p.id===pid ? {...p, leider: val} : p);
+    setProjects(updated);
+    await saveData("bouw_projects", updated);
+    setEditLeider(null);
+  }
+
+  // Drag to reschedule — returns new date string after dragging dx pixels
+  function computeNewDate(origDateStr, dx) {
+    const orig = parseD(origDateStr);
+    if (!orig) return origDateStr;
+    // How many ms per pixel based on viewMode and COL_W
+    const msDayMap = { day: 86400000, week: 7*86400000, month: 30*86400000, year: 91*86400000 };
+    const msPerPx = (msDayMap[viewMode] || 30*86400000) / COL_W;
+    const newMs = orig.getTime() + dx * msPerPx;
+    const newD = new Date(newMs);
+    return `${String(newD.getDate()).padStart(2,"0")}-${String(newD.getMonth()+1).padStart(2,"0")}-${newD.getFullYear()}`;
+  }
+
+  function startDrag(e, p) {
+    e.stopPropagation();
+    const origDate = p.date;
+    const startX = e.clientX;
+    let lastDate = origDate;
+
+    function onMove(ev) {
+      const dx = ev.clientX - startX;
+      const newDate = computeNewDate(origDate, dx);
+      if (newDate !== lastDate) {
+        lastDate = newDate;
+        setDragging({ pid: p.id, newDate });
+        // Live preview — update state temporarily
+        setProjects(prev => prev.map(pr => pr.id===p.id ? {...pr, date: newDate, _dragging: true} : pr));
+      }
+    }
+
+    async function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      setDragging(null);
+      // Save the final date
+      const finalDate = lastDate;
+      const updated = projects.map(pr => {
+        if (pr.id === p.id) {
+          const { _dragging, ...rest } = {...pr, date: finalDate};
+          return rest;
+        }
+        return pr;
+      });
+      setProjects(updated);
+      await saveData("bouw_projects", updated);
+    }
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
   }
 
   const COL_W = viewMode === "day" ? 38 : viewMode === "week" ? 52 : viewMode === "month" ? 58 : 56;
@@ -2719,40 +2787,45 @@ function Tijdschema({ projects, setProjects }) {
                 <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
                   borderRight:"2px solid #DDE3E9", padding:"2px 6px",
                   display:"flex", alignItems:"center", gap:5 }}>
-                  {/* color bar */}
-                  <div style={{ width:2, alignSelf:"stretch", background:color,
+                  <div style={{ width:3, alignSelf:"stretch", background:color,
                     borderRadius:1, flexShrink:0 }}/>
                   <div style={{ flex:1, overflow:"hidden" }}>
-                    <div style={{ fontWeight:700, fontSize:10, color:"#1C2B3A",
-                      whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", lineHeight:1.2 }}>
-                      {p.name}
-                    </div>
-                    {p.typeLabel && (
-                      <div style={{ fontSize:8, color:"#fff", background:"rgba(0,0,0,.35)",
-                        borderRadius:2, padding:"0px 4px", display:"inline-block",
-                        marginTop:1, maxWidth:"100%", overflow:"hidden",
-                        textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                        {p.typeLabel}
+                    {/* Naam — klik om te bewerken */}
+                    {editNaam===p.id ? (
+                      <input autoFocus defaultValue={p.name}
+                        style={{ width:"100%", fontSize:10, fontWeight:700, padding:"1px 4px",
+                          borderRadius:3, border:"1px solid #E65100", outline:"none", boxSizing:"border-box" }}
+                        onKeyDown={e=>{ if(e.key==="Enter") saveNaam(p.id,e.target.value); if(e.key==="Escape") setEditNaam(null); }}
+                        onBlur={e=>saveNaam(p.id,e.target.value)} />
+                    ) : (
+                      <div onClick={()=>setEditNaam(p.id)}
+                        title="Klik om naam te wijzigen"
+                        style={{ fontWeight:700, fontSize:10, color:"#1C2B3A", cursor:"text",
+                          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                          lineHeight:1.3, borderBottom:"1px dashed transparent" }}
+                        onMouseEnter={e=>e.currentTarget.style.borderBottomColor="#BDBDBD"}
+                        onMouseLeave={e=>e.currentTarget.style.borderBottomColor="transparent"}>
+                        {p.name}
                       </div>
                     )}
-                    <div style={{ display:"flex", gap:3, alignItems:"center", flexWrap:"wrap" }}>
+                    <div style={{ display:"flex", gap:3, alignItems:"center", flexWrap:"wrap", marginTop:1 }}>
                       {typeInfo && (
-                        <span style={{ fontSize:9, fontWeight:700,
+                        <span style={{ fontSize:8, fontWeight:700,
                           background:typeInfo.bg, color:typeInfo.text,
                           border:`1px solid ${typeInfo.border}`,
-                          borderRadius:3, padding:"0px 5px" }}>
+                          borderRadius:3, padding:"0px 4px" }}>
                           {typeInfo.label}
                         </span>
                       )}
-                      {/* weken badge / edit */}
+                      {/* weken badge */}
                       {editWeken===p.id ? (
                         <input defaultValue={wekenNum} autoFocus type="number" min="1" max="52"
-                          style={{ width:38, fontSize:10, padding:"1px 4px", borderRadius:3,
+                          style={{ width:36, fontSize:9, padding:"1px 3px", borderRadius:3,
                             border:"1px solid #E65100", outline:"none", textAlign:"center" }}
                           onKeyDown={e=>{ if(e.key==="Enter") saveWeken(p.id,e.target.value); if(e.key==="Escape") setEditWeken(null); }}
                           onBlur={e=>saveWeken(p.id,e.target.value)} />
                       ) : (
-                        <span onClick={()=>setEditWeken(p.id)}
+                        <span onClick={e=>{ e.stopPropagation(); setEditWeken(p.id); }}
                           title="Klik om weken aan te passen"
                           style={{ fontSize:9, color:"#fff",
                             background: p.type==="Dakopbouw"?"#6A1B9A": p.type==="Dakkapel"?"#2E7D32":color,
@@ -2760,13 +2833,26 @@ function Tijdschema({ projects, setProjects }) {
                           {wekenNum}w
                         </span>
                       )}
-                      {hasOverlap && (
-                        <span style={{ fontSize:9, color:"#B71C1C", fontWeight:800 }}>⚠️</span>
-                      )}
-                      {(p.leider||p.collega) && (
-                        <span style={{ fontSize:9, color:"#546E7A", whiteSpace:"nowrap",
-                          overflow:"hidden", textOverflow:"ellipsis", maxWidth:90 }}>
-                          👷{p.leider}{p.collega?" & "+p.collega:""}
+                      {hasOverlap && <span style={{ fontSize:9, color:"#B71C1C", fontWeight:800 }}>⚠️</span>}
+                      {/* Leider — klik om te wijzigen */}
+                      {editLeider===p.id ? (
+                        <select autoFocus value={p.leider||""}
+                          onChange={e=>saveLeider(p.id,e.target.value)}
+                          onBlur={()=>setEditLeider(null)}
+                          style={{ fontSize:9, borderRadius:3, border:"1px solid #90CAF9",
+                            padding:"1px 3px", background:"#fff", maxWidth:90 }}>
+                          <option value="">— geen —</option>
+                          {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
+                        </select>
+                      ) : (
+                        <span onClick={e=>{ e.stopPropagation(); setEditLeider(p.id); }}
+                          title="Klik om projectleider te wijzigen"
+                          style={{ fontSize:9, color:"#546E7A", cursor:"pointer",
+                            whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:80,
+                            borderBottom:"1px dashed transparent" }}
+                          onMouseEnter={e=>e.currentTarget.style.borderBottomColor="#BDBDBD"}
+                          onMouseLeave={e=>e.currentTarget.style.borderBottomColor="transparent"}>
+                          {p.leider ? `👷 ${p.leider}` : <span style={{color:"#BDBDBD"}}>+ leider</span>}
                         </span>
                       )}
                     </div>
@@ -2782,34 +2868,47 @@ function Tijdschema({ projects, setProjects }) {
                       boxSizing:"border-box" }}/>
                   ))}
 
-                  {/* the actual gantt bar — positioned absolute over cells */}
+                  {/* the actual gantt bar — draggable */}
                   {bar && (() => {
                     const left  = bar.startIdx * COL_W + bar.startFrac * COL_W;
                     const right = (cols.length - bar.endIdx - 1) * COL_W + (1 - bar.endFrac) * COL_W;
                     const width = totalWidth - NAME_W - left - right;
-                    const weken = parseInt(p.weken)||4;
+                    const isDragging = dragging?.pid === p.id;
                     return (
-                      <div style={{ position:"absolute", left, width: Math.max(width,4),
-                        top:"50%", transform:"translateY(-50%)",
-                        height:ROW_H-2, borderRadius:3,
-                        background:`linear-gradient(90deg, ${color}, ${color}cc)`,
-                        boxShadow:`0 2px 6px ${color}55`,
-                        display:"flex", alignItems:"center",
-                        overflow:"hidden", cursor:"default" }}
-                        title={`${p.name} · ${p.date} · ${weken} weken${p.leider?" · 👷 "+p.leider:""}`}>
-                        {/* label inside bar if wide enough */}
+                      <div
+                        onMouseDown={e=>{ e.stopPropagation(); startDrag(e, p); }}
+                        style={{ position:"absolute", left, width: Math.max(width,4),
+                          top:"50%", transform:"translateY(-50%)",
+                          height:ROW_H-2, borderRadius:3,
+                          background:`linear-gradient(90deg, ${color}, ${color}cc)`,
+                          boxShadow: isDragging ? `0 4px 16px ${color}99` : `0 2px 6px ${color}55`,
+                          display:"flex", alignItems:"center",
+                          overflow:"hidden",
+                          cursor:"grab",
+                          opacity: isDragging ? 0.85 : 1,
+                          outline: isDragging ? `2px solid ${color}` : "none",
+                          transition: isDragging ? "none" : "box-shadow .15s" }}
+                        title={`${p.name} · ${p.date} · ${wekenNum} weken${p.leider?" · 👷 "+p.leider:""}
+↔ Sleep om datum te verschuiven`}>
+                        {/* date label while dragging */}
+                        {isDragging && (
+                          <span style={{ position:"absolute", top:-18, left:0,
+                            background:"#1C2B3A", color:"#fff", fontSize:9, fontWeight:700,
+                            padding:"2px 6px", borderRadius:3, whiteSpace:"nowrap", zIndex:10 }}>
+                            📅 {p.date}
+                          </span>
+                        )}
                         {width > 50 && (
                           <span style={{ fontSize:9, color:"#fff", fontWeight:700,
-                            paddingLeft:5, whiteSpace:"nowrap", overflow:"hidden",
-                            textOverflow:"ellipsis", maxWidth:width-12 }}>
+                            paddingLeft:8, whiteSpace:"nowrap", overflow:"hidden",
+                            textOverflow:"ellipsis", maxWidth:width-20, pointerEvents:"none" }}>
                             {p.typeLabel ? `${p.typeLabel} · ${p.name.split(" ")[0]}` : p.name.split(" ").slice(0,2).join(" ")}
                           </span>
                         )}
-                        {/* start marker */}
-                        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:4,
-                          background:"rgba(255,255,255,.5)", borderRadius:"5px 0 0 5px" }}/>
-                        {/* end marker */}
-                        <div style={{ position:"absolute", right:0, top:0, bottom:0, width:4,
+                        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:5,
+                          background:"rgba(255,255,255,.5)", borderRadius:"5px 0 0 5px",
+                          cursor:"ew-resize" }}/>
+                        <div style={{ position:"absolute", right:0, top:0, bottom:0, width:5,
                           background:"rgba(0,0,0,.2)", borderRadius:"0 5px 5px 0" }}/>
                       </div>
                     );
