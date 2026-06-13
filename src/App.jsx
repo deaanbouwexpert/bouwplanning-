@@ -1501,14 +1501,15 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
       const isHighlighted = highlightProject === p.id;
       return (
       <tr id={"proj-row-"+p.id}
-        style={{ background: isHighlighted ? "#FFF8E1" : (p.afgerond ? "#F9FBE7" : (ri%2===0 ? "#FAFBFC" : "#fff")),
-          opacity: p.afgerond ? 0.8 : 1,
-          outline: isHighlighted ? "3px solid #E65100" : "none",
+        style={{ background: isHighlighted ? "#FFF8E1" : (p.afgerond ? "#E8F5E9" : (ri%2===0 ? "#FAFBFC" : "#fff")),
+          opacity: 1,
+          outline: isHighlighted ? "3px solid #E65100" : p.afgerond ? "2px solid #A5D6A7" : "none",
           transition:"background .3s" }}
-        onMouseEnter={e=>{ if(!isHighlighted) e.currentTarget.style.background=p.afgerond?"#F0F4C3":"#EBF3FF"; }}
-        onMouseLeave={e=>{ if(!isHighlighted) e.currentTarget.style.background=isHighlighted?"#FFF8E1":(p.afgerond?"#F9FBE7":(ri%2===0?"#FAFBFC":"#fff")); }}>
-        <td style={{ ...TD, position:"sticky", left:0, background:"inherit",
-          zIndex:1, borderRight:"2px solid #DDE3E9", minWidth:200, verticalAlign:"top", paddingTop:8 }}>
+        onMouseEnter={e=>{ if(!isHighlighted) e.currentTarget.style.background=p.afgerond?"#C8E6C9":"#EBF3FF"; }}
+        onMouseLeave={e=>{ if(!isHighlighted) e.currentTarget.style.background=isHighlighted?"#FFF8E1":(p.afgerond?"#E8F5E9":(ri%2===0?"#FAFBFC":"#fff")); }}>
+        <td style={{ ...TD, position:"sticky", left:0, background: p.afgerond ? "#E8F5E9" : "inherit",
+          zIndex:1, borderRight: p.afgerond ? "3px solid #A5D6A7" : "2px solid #DDE3E9",
+          minWidth:200, verticalAlign:"top", paddingTop:8 }}>
           <div style={{ display:"flex", gap:7, alignItems:"flex-start" }}>
             {/* checkbox */}
             <button onClick={()=>toggleAfgerond(p.id)}
@@ -1521,10 +1522,18 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
               {p.afgerond ? "✓" : ""}
             </button>
             <div style={{ flex:1 }}>
+              {/* Afgerond badge */}
+              {p.afgerond && (
+                <div style={{ fontSize:10, fontWeight:700, color:"#2E7D32",
+                  background:"#C8E6C9", borderRadius:4, padding:"1px 7px",
+                  display:"inline-block", marginBottom:3 }}>
+                  ✅ Afgerond
+                </div>
+              )}
               {/* Project naam */}
               <div style={{ fontWeight:800, fontSize:12,
-                color: p.afgerond ? "#90A4AE" : "#1C2B3A",
-                textDecoration: p.afgerond ? "line-through" : "none" }}>
+                color: p.afgerond ? "#2E7D32" : "#1C2B3A",
+                textDecoration: "none" }}>
                 {p.name}
               </div>
               {/* Type badge */}
