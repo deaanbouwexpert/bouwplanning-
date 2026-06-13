@@ -2383,16 +2383,16 @@ function Tijdschema({ projects, setProjects }) {
   // ── Build columns based on viewMode ─────────────────────────────────
   function buildCols() {
     if (viewMode === "day") {
-      // 14 days starting from anchor
-      return Array.from({length: 14}, (_, i) => {
+      // 60 days starting from anchor
+      return Array.from({length: 60}, (_, i) => {
         const d = addDays(anchor, i);
         return { label: fmtDay(d), subLabel: ["Zo","Ma","Di","Wo","Do","Vr","Za"][d.getDay()], start: d, end: d, isWeekend: d.getDay()===0||d.getDay()===6, isToday: sameDay(d, today) };
       });
     }
     if (viewMode === "week") {
-      // 12 weeks starting from Monday of anchor week
+      // 26 weeks starting from Monday of anchor week
       const mon = startOfWeek(anchor);
-      return Array.from({length: 12}, (_, i) => {
+      return Array.from({length: 26}, (_, i) => {
         const ws = addDays(mon, i * 7);
         const we = addDays(ws, 6);
         const wn = Math.ceil((((ws - new Date(ws.getFullYear(),0,1))/86400000)+1)/7);
@@ -2400,8 +2400,8 @@ function Tijdschema({ projects, setProjects }) {
       });
     }
     if (viewMode === "month") {
-      // 12 months starting from anchor month
-      return Array.from({length: 12}, (_, i) => {
+      // 24 months starting from anchor month
+      return Array.from({length: 24}, (_, i) => {
         let m = anchor.getMonth() + i;
         let y = anchor.getFullYear();
         while (m > 11) { m -= 12; y++; }
@@ -2430,7 +2430,7 @@ function Tijdschema({ projects, setProjects }) {
   // ── Navigate ─────────────────────────────────────────────────────────
   function navigate(dir) {
     const d = new Date(anchor);
-    const steps = { day: 7, week: 6, month: 6, year: 2 };
+    const steps = { day: 30, week: 13, month: 12, year: 2 };
     const n = steps[viewMode] * dir;
     if (viewMode === "day")   d.setDate(d.getDate() + n);
     if (viewMode === "week")  d.setDate(d.getDate() + n * 7);
@@ -2892,10 +2892,25 @@ function Tijdschema({ projects, setProjects }) {
                 {/* column backgrounds */}
                 {cols.map((c,ci) => (
                   <div key={ci} style={{ width:COL_W, minWidth:COL_W, flexShrink:0, height:"100%",
-                    background: c.isToday?"rgba(230,81,0,.07)":(c.isWeekend?"rgba(0,0,0,.025)":"transparent"),
-                    borderLeft: c.isToday?"2px solid rgba(230,81,0,.4)":"1px solid #F0F2F5",
+                    background: c.isToday?"rgba(230,81,0,.07)":(c.isWeekend?"rgba(0,0,0,.02)":"transparent"),
+                    borderLeft: c.isToday?"2px solid rgba(230,81,0,.5)":"1px solid #F0F2F5",
                     position:"absolute", left:ci*COL_W, top:0 }}/>
                 ))}
+                {/* vandaag lijn */}
+                {(() => {
+                  const todayMs = today.getTime();
+                  for (let ci=0; ci<cols.length; ci++) {
+                    const { start, end } = cols[ci];
+                    if (todayMs >= start.getTime() && todayMs <= end.getTime()) {
+                      const frac = (todayMs - start.getTime()) / (end.getTime() - start.getTime());
+                      const x = ci * COL_W + frac * COL_W;
+                      return <div style={{ position:"absolute", left:x, top:0, bottom:0,
+                        width:2, background:"#E65100", zIndex:3, pointerEvents:"none",
+                        boxShadow:"0 0 4px #E65100" }} />;
+                    }
+                  }
+                  return null;
+                })()}
 
                 {/* gantt bar */}
                 {bar && (() => {
