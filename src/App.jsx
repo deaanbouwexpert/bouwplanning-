@@ -2580,7 +2580,7 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
           borderRadius:10,border:"1px solid #DDE3E9",
           boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
       <div ref={scrollRef}
-        style={{overflowX:"auto",background:"#fff"}}>
+        style={{overflowX:"scroll",background:"#fff"}}>
 
         <div style={{minWidth:NAME_W+totalW}}>
 
