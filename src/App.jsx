@@ -2842,12 +2842,12 @@ function Tijdschema({ projects, setProjects }) {
                 {/* NAAM CEL — sticky */}
                 <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
                   position:"sticky", left:0, zIndex:4,
-                  background: hasOverlap?"inherit": pi%2===0?"#FAFBFC":"#fff",
+                  background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
                   borderRight:"3px solid #DDE3E9",
                   borderLeft:"3px solid "+color,
-                  padding:"2px 6px", display:"flex", alignItems:"center",
+                  padding:"4px 6px", display:"flex", alignItems:"flex-start",
                   boxSizing:"border-box" }}>
-                  <div style={{ flex:1, overflow:"hidden" }}>
+                  <div style={{ flex:1, minWidth:0 }}>
                     {/* naam */}
                     {editNaam===p.id ? (
                       <input autoFocus defaultValue={p.name}
