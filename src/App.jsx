@@ -2325,694 +2325,411 @@ function Jaarplanning({ projects, setProjects, onProjectClick }) {
 
 // ── TIJDSCHEMA ────────────────────────────────────────────────────────
 const PROJ_COLORS = [
-  "#E65100","#1565C0","#6A1B9A","#2E7D32","#B71C1C",
-  "#0277BD","#558B2F","#4527A0","#AD1457","#00695C",
-  "#F57F17","#00838F","#6D4C41","#37474F","#C62828",
-  "#1B5E20","#4A148C","#BF360C","#006064","#37474F",
+  "#E65100","#1565C0","#6A1B9A","#2E7D32","#B71C1C","#0277BD",
+  "#558B2F","#4527A0","#AD1457","#00695C","#F57F17","#00838F",
+  "#6D4C41","#37474F","#BF360C","#1B5E20","#4A148C","#006064",
 ];
 
 function Tijdschema({ projects, setProjects }) {
-  const today = new Date();
-
-  // View mode: day | week | month | year
+  const today      = new Date();
   const [viewMode, setViewMode] = useState("month");
-  // Anchor date — start of visible range
-  const [anchor, setAnchor] = useState(() => {
-    const d = new Date(today);
-    d.setDate(1);
-    return d;
-  });
-  const [editWeken,    setEditWeken]    = useState(null);
-  const [editNaam,     setEditNaam]     = useState(null);  // pid being name-edited
-  const [editLeider,   setEditLeider]   = useState(null);
-  const [editCollega,  setEditCollega]  = useState(null);
-  const [editTeamTs,   setEditTeamTs]   = useState(null);  // pid for team popup in tijdschema
-  const [filterType,   setFilterType]   = useState("");
-  const [filterLeider, setFilterLeider] = useState("");
-  const [search,       setSearch]       = useState("");
-  const [dragging,     setDragging]     = useState(null);  // { pid, startX, origDate }
-  const isDraggingBar  = useRef(false);
-  const timelineRef    = useRef(null);
+  const [anchor,   setAnchor]   = useState(() => { const d=new Date(today); d.setDate(1); return d; });
+  const [search,   setSearch]   = useState("");
+  const [filterType,    setFilterType]    = useState("");
+  const [filterLeider,  setFilterLeider]  = useState("");
+  const [editWeken,  setEditWeken]  = useState(null);
+  const [editNaam,   setEditNaam]   = useState(null);
+  const [teamPid,    setTeamPid]    = useState(null);
+  const [teamLeider, setTeamLeider] = useState("");
+  const [teamCollega,setTeamCollega]= useState("");
+  const scrollRef = useRef(null);
+  const dragRef   = useRef({ active:false });
 
-  // Scroll timeline to show today on load and viewMode change
-  useEffect(() => {
-    const el = timelineRef.current;
-    if (!el) return;
-    // Find today's position in cols
-    const todayMs = today.getTime();
-    let todayX = 0;
-    for (let i = 0; i < cols.length; i++) {
-      const { start, end } = cols[i];
-      if (todayMs >= start.getTime() && todayMs <= end.getTime()) {
-        const frac = (todayMs - start.getTime()) / (end.getTime() - start.getTime() + 1);
-        todayX = i * COL_W + frac * COL_W;
-        break;
-      }
-    }
-    // Center today on screen
-    const centerOffset = el.clientWidth / 2;
-    el.scrollLeft = Math.max(0, todayX - centerOffset);
-  }, [viewMode, anchor]);
-
-  // ── Date helpers ────────────────────────────────────────────────────
-  function parseD(str = "") {
-    if (!str) return null;
-    const m = str.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
-    if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
-    const s = str.match(/^(\d{1,2})[-./](\d{1,2})$/);
-    if (s) return new Date(2026, parseInt(s[2]) - 1, parseInt(s[1]));
-    return null;
+  function parseD(s="") {
+    const m = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+    return m ? new Date(+m[3],+m[2]-1,+m[1]) : null;
   }
+  function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+  function startOfWeek(d){ const r=new Date(d); r.setDate(r.getDate()-(( r.getDay()+6)%7)); return r; }
+  function fmtD(d){ return `${d.getDate()}-${d.getMonth()+1}`; }
+
   function getEndDate(p) {
-    const start = parseD(p.date);
-    if (!start) return null;
-    const defaultWeken = p.type === "Dakopbouw" ? 8 : p.type === "Dakkapel" ? 1 : 4;
-    const weken = parseInt(p.weken) || defaultWeken;
-    const end = new Date(start);
-    end.setDate(start.getDate() + weken * 7);
-    return end;
+    const s = parseD(p.date); if(!s) return null;
+    const def = p.type==="Dakopbouw"?8: p.type==="Dakkapel"?1:4;
+    const w = parseInt(p.weken)||def;
+    return addDays(s, w*7);
   }
-  function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
-  function startOfWeek(d) {
-    const r = new Date(d);
-    const day = r.getDay();
-    r.setDate(r.getDate() - ((day + 6) % 7));
-    return r;
-  }
-  function sameDay(a, b) { return a.toDateString() === b.toDateString(); }
-  function fmtDay(d) { return `${d.getDate()}-${d.getMonth()+1}`; }
-  function fmtFull(d) { return `${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}-${d.getFullYear()}`; }
 
-  // ── Build columns based on viewMode ─────────────────────────────────
+  // Build columns
   function buildCols() {
-    if (viewMode === "day") {
-      // 60 days starting from anchor
-      return Array.from({length: 60}, (_, i) => {
-        const d = addDays(anchor, i);
-        return { label: fmtDay(d), subLabel: ["Zo","Ma","Di","Wo","Do","Vr","Za"][d.getDay()], start: d, end: d, isWeekend: d.getDay()===0||d.getDay()===6, isToday: sameDay(d, today) };
-      });
+    if (viewMode==="day") {
+      return Array.from({length:60},(_,i)=>{ const d=addDays(anchor,i); const wd=d.getDay();
+        return { label:`${d.getDate()}-${d.getMonth()+1}`, sub:["Zo","Ma","Di","Wo","Do","Vr","Za"][wd],
+          start:new Date(d.setHours(0,0,0,0)), end:new Date(d.setHours(23,59,59,999)),
+          isWeekend:wd===0||wd===6, isToday:d.toDateString()===today.toDateString() }; });
     }
-    if (viewMode === "week") {
-      // 26 weeks starting from Monday of anchor week
-      const mon = startOfWeek(anchor);
-      return Array.from({length: 26}, (_, i) => {
-        const ws = addDays(mon, i * 7);
-        const we = addDays(ws, 6);
-        const wn = Math.ceil((((ws - new Date(ws.getFullYear(),0,1))/86400000)+1)/7);
-        return { label: `W${wn}`, subLabel: `${fmtDay(ws)}`, start: ws, end: we, isWeekend: false, isToday: today >= ws && today <= we };
-      });
+    if (viewMode==="week") {
+      const mon=startOfWeek(anchor);
+      return Array.from({length:26},(_,i)=>{ const s=addDays(mon,i*7); const e=addDays(s,6);
+        const wn=Math.ceil((((s-new Date(s.getFullYear(),0,1))/86400000)+1)/7);
+        return { label:`W${wn}`, sub:`${fmtD(s)}`, start:s, end:e, isWeekend:false, isToday:today>=s&&today<=e }; });
     }
-    if (viewMode === "month") {
-      // 24 months starting from anchor month
-      return Array.from({length: 24}, (_, i) => {
-        let m = anchor.getMonth() + i;
-        let y = anchor.getFullYear();
-        while (m > 11) { m -= 12; y++; }
-        const s = new Date(y, m, 1);
-        const e = new Date(y, m + 1, 0);
-        return { label: YEAR_MONTHS[m], subLabel: String(y), start: s, end: e, isWeekend: false, isToday: today.getMonth()===m && today.getFullYear()===y };
-      });
+    if (viewMode==="month") {
+      return Array.from({length:24},(_,i)=>{ let m=anchor.getMonth()+i, y=anchor.getFullYear();
+        while(m>11){m-=12;y++;} const s=new Date(y,m,1); const e=new Date(y,m+1,0);
+        return { label:YEAR_MONTHS[m], sub:String(y), start:s, end:e, isWeekend:false, isToday:today.getMonth()===m&&today.getFullYear()===y }; });
     }
-    // year — show 4 years, each split into quarters
-    const startY = anchor.getFullYear();
-    const cols = [];
-    for (let y = startY; y < startY + 4; y++) {
-      for (let q = 0; q < 4; q++) {
-        const s = new Date(y, q * 3, 1);
-        const e = new Date(y, q * 3 + 3, 0);
-        cols.push({ label: `K${q+1}`, subLabel: String(y), start: s, end: e, isWeekend: false, isToday: today >= s && today <= e });
-      }
+    const cols=[]; const sy=anchor.getFullYear();
+    for(let y=sy;y<sy+4;y++) for(let q=0;q<4;q++){
+      const s=new Date(y,q*3,1), e=new Date(y,q*3+3,0);
+      cols.push({label:`K${q+1}`,sub:String(y),start:s,end:e,isWeekend:false,isToday:today>=s&&today<=e});
     }
     return cols;
   }
-
   const cols = buildCols();
-  const rangeStart = cols[0].start;
-  const rangeEnd   = cols[cols.length - 1].end;
+  const COL_W = viewMode==="day"?40: viewMode==="week"?56: viewMode==="month"?72:64;
+  const ROW_H = 54;
+  const NAME_W = 200;
 
-  // ── Navigate ─────────────────────────────────────────────────────────
+  // Header groups
+  function headerGroups() {
+    const g={};
+    cols.forEach(c=>{
+      const key = viewMode==="year" ? c.sub : `${c.start.getFullYear()}-${c.start.getMonth()}`;
+      const lbl = viewMode==="year" ? c.sub : `${YEAR_MONTHS[c.start.getMonth()]} ${c.start.getFullYear()}`;
+      if(!g[key]) g[key]={label:lbl,count:0};
+      g[key].count++;
+    });
+    return Object.values(g);
+  }
+
   function navigate(dir) {
-    const d = new Date(anchor);
-    const steps = { day: 30, week: 13, month: 12, year: 2 };
-    const n = steps[viewMode] * dir;
-    if (viewMode === "day")   d.setDate(d.getDate() + n);
-    if (viewMode === "week")  d.setDate(d.getDate() + n * 7);
-    if (viewMode === "month") d.setMonth(d.getMonth() + n);
-    if (viewMode === "year")  d.setFullYear(d.getFullYear() + n);
-    setAnchor(d);
-  }
-  function goToday() {
-    const d = new Date(today);
-    if (viewMode !== "day") d.setDate(1);
+    const d=new Date(anchor);
+    if(viewMode==="day")   d.setDate(d.getDate()+dir*30);
+    if(viewMode==="week")  d.setDate(d.getDate()+dir*13*7);
+    if(viewMode==="month") d.setMonth(d.getMonth()+dir*12);
+    if(viewMode==="year")  d.setFullYear(d.getFullYear()+dir*2);
     setAnchor(d);
   }
 
-  // ── Filter projects ───────────────────────────────────────────────────
-  const visibleProjects = projects
-    .filter(p => !p.afgerond)
-    .filter(p => filterType ? p.type === filterType : true)
-    .filter(p => filterLeider ? (p.leider===filterLeider || p.collega===filterLeider) : true)
-    .filter(p => search ? p.name.toLowerCase().includes(search.toLowerCase()) : true)
-    .sort((a, b) => {
-      const sa = parseD(a.date), sb = parseD(b.date);
-      return (sa || new Date(9999,0,1)) - (sb || new Date(9999,0,1));
-    });
-
-  // ── Bar position for a project within cols ────────────────────────────
+  // Bar position
   function getBar(p) {
-    const pStart = parseD(p.date);
-    const pEnd   = getEndDate(p);
-    if (!pStart || !pEnd) return null;
-    let startIdx = -1, endIdx = -1;
-    let startFrac = 0, endFrac = 1;
-    for (let i = 0; i < cols.length; i++) {
-      const { start, end } = cols[i];
-      const colMs = end - start + 86400000;
-      if (pStart <= end && pEnd >= start) {
-        if (startIdx === -1) {
-          startIdx = i;
-          startFrac = pStart > start ? (pStart - start) / colMs : 0;
-        }
-        endIdx = i;
-        endFrac = pEnd < end ? (pEnd - start + 86400000) / colMs : 1;
+    const ps=parseD(p.date), pe=getEndDate(p); if(!ps||!pe) return null;
+    let si=-1, ei=-1, sf=0, ef=1;
+    cols.forEach((c,i)=>{ const ms=c.end-c.start+86400000;
+      if(ps<=c.end && pe>=c.start){
+        if(si===-1){si=i; sf=ps>c.start?(ps-c.start)/ms:0;}
+        ei=i; ef=pe<c.end?(pe-c.start+86400000)/ms:1;
       }
-    }
-    return startIdx === -1 ? null : { startIdx, endIdx, startFrac, endFrac };
-  }
-
-  async function saveWeken(pid, val) {
-    const w = parseInt(val);
-    if (!w || w < 1) { setEditWeken(null); return; }
-    const updated = projects.map(p => p.id===pid ? {...p, weken: String(w)} : p);
-    setProjects(updated);
-    await saveData("bouw_projects", updated);
-    setEditWeken(null);
-  }
-
-  async function saveNaam(pid, val) {
-    if (!val.trim()) { setEditNaam(null); return; }
-    const updated = projects.map(p => p.id===pid ? {...p, name: val.trim()} : p);
-    setProjects(updated);
-    await saveData("bouw_projects", updated);
-    setEditNaam(null);
-  }
-
-  async function saveLeider(pid, val) {
-    const updated = projects.map(p => p.id===pid ? {...p, leider: val} : p);
-    setProjects(updated);
-    await saveData("bouw_projects", updated);
-    setEditLeider(null);
-  }
-
-  async function saveCollega(pid, val) {
-    const updated = projects.map(p => p.id===pid ? {...p, collega: val} : p);
-    setProjects(updated);
-    await saveData("bouw_projects", updated);
-    setEditCollega(null);
-  }
-
-  // Drag to reschedule — returns new date string after dragging dx pixels
-  function computeNewDate(origDateStr, dx) {
-    const orig = parseD(origDateStr);
-    if (!orig) return origDateStr;
-    // How many ms per pixel based on viewMode and COL_W
-    const msDayMap = { day: 86400000, week: 7*86400000, month: 30*86400000, year: 91*86400000 };
-    const msPerPx = (msDayMap[viewMode] || 30*86400000) / COL_W;
-    const newMs = orig.getTime() + dx * msPerPx;
-    const newD = new Date(newMs);
-    return `${String(newD.getDate()).padStart(2,"0")}-${String(newD.getMonth()+1).padStart(2,"0")}-${newD.getFullYear()}`;
-  }
-
-  function startDrag(e, p) {
-    e.stopPropagation();
-    e.preventDefault();
-    isDraggingBar.current = true;
-    const origDate = p.date;
-    const startX = e.clientX;
-    let lastDate = origDate;
-
-    function onMove(ev) {
-      const dx = ev.clientX - startX;
-      const newDate = computeNewDate(origDate, dx);
-      if (newDate !== lastDate) {
-        lastDate = newDate;
-        setDragging({ pid: p.id, newDate });
-        // Live preview — update state temporarily
-        setProjects(prev => prev.map(pr => pr.id===p.id ? {...pr, date: newDate, _dragging: true} : pr));
-      }
-    }
-
-    async function onUp() {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      isDraggingBar.current = false;
-      setDragging(null);
-      // Save the final date
-      const finalDate = lastDate;
-      const updated = projects.map(pr => {
-        if (pr.id === p.id) {
-          const { _dragging, ...rest } = {...pr, date: finalDate};
-          return rest;
-        }
-        return pr;
-      });
-      setProjects(updated);
-      await saveData("bouw_projects", updated);
-    }
-
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  }
-
-  const COL_W = viewMode === "day" ? 38 : viewMode === "week" ? 52 : viewMode === "month" ? 58 : 56;
-  const ROW_H    = 52;  // row height — same on left and right (3 lines: naam + badges + leider/collega)
-  const HEADER_H = 22;  // each header row height
-  const NAME_W = 190;
-  const dayNames = ["Zo","Ma","Di","Wo","Do","Vr","Za"];
-
-  // group cols by year/month for header spanning
-  function buildHeaderGroups() {
-    if (viewMode === "day") {
-      const groups = {};
-      cols.forEach((c,i) => {
-        const key = `${c.start.getFullYear()}-${c.start.getMonth()}`;
-        if (!groups[key]) groups[key] = { label: `${YEAR_MONTHS[c.start.getMonth()]} ${c.start.getFullYear()}`, count: 0 };
-        groups[key].count++;
-      });
-      return Object.values(groups);
-    }
-    if (viewMode === "week") {
-      const groups = {};
-      cols.forEach(c => {
-        const key = `${c.start.getFullYear()}-${c.start.getMonth()}`;
-        if (!groups[key]) groups[key] = { label: `${YEAR_MONTHS[c.start.getMonth()]} ${c.start.getFullYear()}`, count: 0 };
-        groups[key].count++;
-      });
-      return Object.values(groups);
-    }
-    if (viewMode === "month") {
-      const groups = {};
-      cols.forEach(c => {
-        const key = c.subLabel;
-        if (!groups[key]) groups[key] = { label: c.subLabel, count: 0 };
-        groups[key].count++;
-      });
-      return Object.values(groups);
-    }
-    // year — group by year
-    const groups = {};
-    cols.forEach(c => {
-      const key = c.subLabel;
-      if (!groups[key]) groups[key] = { label: key, count: 0 };
-      groups[key].count++;
     });
-    return Object.values(groups);
+    return si===-1?null:{si,ei,sf,ef};
   }
 
-  const headerGroups = buildHeaderGroups();
-  const totalWidth = NAME_W + cols.length * COL_W;
-
-  // ── Overlap detectie ─────────────────────────────────────────────────
-  const overlapSet = new Set();
-  for (let i = 0; i < visibleProjects.length; i++) {
-    for (let j = i+1; j < visibleProjects.length; j++) {
-      const a = visibleProjects[i], b = visibleProjects[j];
-      const as = parseD(a.date), ae = getEndDate(a);
-      const bs = parseD(b.date), be = getEndDate(b);
-      if (as && ae && bs && be && as < be && bs < ae) {
-        overlapSet.add(a.id);
-        overlapSet.add(b.id);
-      }
+  // Scroll to today
+  useEffect(()=>{
+    const el=scrollRef.current; if(!el) return;
+    let x=0;
+    for(let i=0;i<cols.length;i++){
+      const {start,end}=cols[i];
+      if(today>=start&&today<=end){ const f=(today-start)/(end-start+1); x=i*COL_W+f*COL_W; break; }
     }
+    el.scrollLeft=Math.max(0,x-el.clientWidth/2);
+  },[viewMode,anchor]);
+
+  // Save functions
+  async function saveWeken(pid,val){
+    const w=parseInt(val); if(!w||w<1){setEditWeken(null);return;}
+    const u=projects.map(p=>p.id===pid?{...p,weken:String(w)}:p);
+    setProjects(u); await saveData("bouw_projects",u); setEditWeken(null);
+  }
+  async function saveNaam(pid,val){
+    if(!val.trim()){setEditNaam(null);return;}
+    const u=projects.map(p=>p.id===pid?{...p,name:val.trim()}:p);
+    setProjects(u); await saveData("bouw_projects",u); setEditNaam(null);
+  }
+  async function saveTeam(pid){
+    const u=projects.map(p=>p.id===pid?{...p,leider:teamLeider,collega:teamCollega}:p);
+    setProjects(u); await saveData("bouw_projects",u); setTeamPid(null);
   }
 
-  return (
-    <div style={{ fontFamily:"'Inter',sans-serif" }}>
+  // Drag bar to reschedule
+  function startDrag(e,p){
+    e.stopPropagation(); e.preventDefault();
+    dragRef.current.active=true;
+    const orig=parseD(p.date); const sx=e.clientX;
+    const msPerPx=(cols[0].end-cols[0].start+86400000)/COL_W;
+    function mv(ev){
+      const dx=ev.clientX-sx;
+      const newD=new Date(orig.getTime()+dx*msPerPx);
+      const ds=`${String(newD.getDate()).padStart(2,"0")}-${String(newD.getMonth()+1).padStart(2,"0")}-${newD.getFullYear()}`;
+      setProjects(prev=>prev.map(pr=>pr.id===p.id?{...pr,date:ds}:pr));
+    }
+    async function up(){
+      dragRef.current.active=false;
+      document.removeEventListener("mousemove",mv);
+      document.removeEventListener("mouseup",up);
+      const cur=projects.find(pr=>pr.id===p.id);
+      if(cur){ const u=projects.map(pr=>pr.id===p.id?cur:pr); await saveData("bouw_projects",u); }
+    }
+    document.addEventListener("mousemove",mv);
+    document.addEventListener("mouseup",up);
+  }
 
-      {/* ── MAAND SNELKEUZE ── */}
-      <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:10 }}>
-        {[2026,2027].map(y => (
-          <div key={y} style={{ display:"flex", gap:3, alignItems:"center" }}>
-            <span style={{ fontSize:11, fontWeight:700, color:"#90A4AE", marginRight:2 }}>{y}</span>
-            {YEAR_MONTHS.map((m, mi) => {
-              const d = new Date(y, mi, 1);
-              const isActive = anchor.getMonth()===mi && anchor.getFullYear()===y && viewMode==="month";
-              const isNow = today.getMonth()===mi && today.getFullYear()===y;
-              const cnt = projects.filter(p=>{ const pd=parseD(p.date); return pd && pd.getMonth()===mi && pd.getFullYear()===y && !p.afgerond; }).length;
+  // Filtered projects
+  const allProjects = projects
+    .filter(p=>!p.afgerond)
+    .filter(p=>filterType?p.type===filterType:true)
+    .filter(p=>filterLeider?(p.leider===filterLeider||p.collega===filterLeider):true)
+    .filter(p=>search?p.name.toLowerCase().includes(search.toLowerCase()):true)
+    .sort((a,b)=>(parseD(a.date)||new Date(9999,0,1))-(parseD(b.date)||new Date(9999,0,1)));
+
+  // Overlap detection
+  const overlapIds=new Set();
+  for(let i=0;i<allProjects.length;i++) for(let j=i+1;j<allProjects.length;j++){
+    const a=allProjects[i],b=allProjects[j];
+    const as=parseD(a.date),ae=getEndDate(a),bs=parseD(b.date),be=getEndDate(b);
+    if(as&&ae&&bs&&be&&as<be&&bs<ae){overlapIds.add(a.id);overlapIds.add(b.id);}
+  }
+
+  const hg = headerGroups();
+  const totalW = cols.length*COL_W;
+
+  // Month quick buttons
+  function MonthPicker() {
+    return (
+      <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:8}}>
+        {[2026,2027].map(y=>(
+          <div key={y} style={{display:"flex",gap:2,alignItems:"center"}}>
+            <span style={{fontSize:10,fontWeight:700,color:"#90A4AE",width:30}}>{y}</span>
+            {YEAR_MONTHS.map((m,mi)=>{
+              const isNow=today.getMonth()===mi&&today.getFullYear()===y;
+              const isActive=anchor.getMonth()===mi&&anchor.getFullYear()===y&&viewMode==="month";
+              const cnt=allProjects.filter(p=>{const d=parseD(p.date);return d&&d.getMonth()===mi&&d.getFullYear()===y;}).length;
               return (
-                <button key={m} onClick={()=>{ setViewMode("month"); setAnchor(new Date(y,mi,1)); }}
-                  style={{ padding:"3px 7px", borderRadius:5, border:"none",
-                    cursor:"pointer", fontSize:11, fontWeight:isActive?800:500,
-                    background: isActive?"#E65100": isNow?"#FFF3E0":"#F0F2F5",
-                    color: isActive?"#fff": isNow?"#E65100":"#546E7A",
-                    position:"relative", minWidth:28 }}>
+                <button key={m} onClick={()=>{setViewMode("month");setAnchor(new Date(y,mi,1));}}
+                  style={{padding:"2px 6px",borderRadius:4,border:"none",cursor:"pointer",
+                    fontSize:10,fontWeight:isActive?800:500,position:"relative",
+                    background:isActive?"#E65100":isNow?"#FFF3E0":"#F0F2F5",
+                    color:isActive?"#fff":isNow?"#E65100":"#546E7A"}}>
                   {m}
-                  {cnt>0 && <span style={{ position:"absolute", top:-4, right:-3,
-                    background: isActive?"#fff":"#E65100", color: isActive?"#E65100":"#fff",
-                    borderRadius:10, fontSize:8, fontWeight:900, padding:"0 3px",
-                    lineHeight:"14px", minWidth:14, textAlign:"center" }}>{cnt}</span>}
+                  {cnt>0&&<span style={{position:"absolute",top:-4,right:-3,
+                    background:isActive?"#fff":"#E65100",color:isActive?"#E65100":"#fff",
+                    borderRadius:8,fontSize:8,fontWeight:900,padding:"0 3px",lineHeight:"13px"}}>{cnt}</span>}
                 </button>
               );
             })}
           </div>
         ))}
       </div>
+    );
+  }
 
-      {/* ── CONTROLS ── */}
-      <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center", marginBottom:12 }}>
+  return (
+    <div style={{fontFamily:"Inter,sans-serif"}}>
 
-        {/* View mode */}
-        <div style={{ display:"flex", background:"#F0F2F5", borderRadius:8, padding:3 }}>
-          {[["day","Dag"],["week","Week"],["month","Maand"],["year","Jaar"]].map(([k,l]) => (
-            <button key={k} onClick={()=>{ setViewMode(k); }}
-              style={{ background:viewMode===k?"#1C2B3A":"transparent",
-                color:viewMode===k?"#fff":"#546E7A",
-                border:"none", borderRadius:6, padding:"6px 14px",
-                cursor:"pointer", fontSize:12, fontWeight:viewMode===k?700:500,
-                transition:"all .15s" }}>
+      {/* Maand snelkeuze */}
+      <MonthPicker />
+
+      {/* Controls */}
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:12}}>
+        <div style={{display:"flex",background:"#F0F2F5",borderRadius:8,padding:3}}>
+          {[["day","Dag"],["week","Week"],["month","Maand"],["year","Jaar"]].map(([k,l])=>(
+            <button key={k} onClick={()=>setViewMode(k)}
+              style={{background:viewMode===k?"#1C2B3A":"transparent",color:viewMode===k?"#fff":"#546E7A",
+                border:"none",borderRadius:6,padding:"5px 12px",cursor:"pointer",
+                fontSize:12,fontWeight:viewMode===k?700:500}}>
               {l}
             </button>
           ))}
         </div>
-
-        {/* Navigate */}
-        <button onClick={()=>navigate(-1)}
-          style={{ background:"#1C2B3A", color:"#fff", border:"none",
-            borderRadius:6, padding:"7px 14px", cursor:"pointer", fontWeight:700, fontSize:14 }}>◀</button>
-        <button onClick={goToday}
-          style={{ background:"#FFF3E0", color:"#E65100", border:"1px solid #FFCC80",
-            borderRadius:6, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700 }}>
+        <button onClick={()=>navigate(-1)} style={{background:"#1C2B3A",color:"#fff",border:"none",
+          borderRadius:6,padding:"6px 14px",cursor:"pointer",fontWeight:700,fontSize:14}}>◀</button>
+        <button onClick={()=>{setAnchor(new Date(today.getFullYear(),today.getMonth(),1));setViewMode("month");}}
+          style={{background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80",
+            borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>
           Vandaag
         </button>
-        <button onClick={()=>navigate(1)}
-          style={{ background:"#1C2B3A", color:"#fff", border:"none",
-            borderRadius:6, padding:"7px 14px", cursor:"pointer", fontWeight:700, fontSize:14 }}>▶</button>
-
-        {/* Range label */}
-        <span style={{ fontWeight:800, fontSize:14, color:"#1C2B3A", minWidth:180 }}>
-          {viewMode==="day"   && `${fmtDay(cols[0].start)} – ${fmtDay(cols[cols.length-1].end)}`}
-          {viewMode==="week"  && `${fmtDay(cols[0].start)} – ${fmtDay(cols[cols.length-1].end)}`}
-          {viewMode==="month" && `${YEAR_MONTHS[cols[0].start.getMonth()]} – ${YEAR_MONTHS[cols[cols.length-1].start.getMonth()]} ${cols[cols.length-1].start.getFullYear()}`}
-          {viewMode==="year"  && `${cols[0].subLabel} – ${cols[cols.length-1].subLabel}`}
-        </span>
-
-        {/* Filters */}
-        <input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="🔍 Zoek project…"
-          style={{ padding:"6px 10px", borderRadius:6, border:"1px solid #CFD8DC",
-            fontSize:12, width:160, outline:"none" }} />
+        <button onClick={()=>navigate(1)} style={{background:"#1C2B3A",color:"#fff",border:"none",
+          borderRadius:6,padding:"6px 14px",cursor:"pointer",fontWeight:700,fontSize:14}}>▶</button>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Zoek..."
+          style={{padding:"6px 10px",borderRadius:6,border:"1px solid #CFD8DC",fontSize:12,width:140,outline:"none"}}/>
         <select value={filterType} onChange={e=>setFilterType(e.target.value)}
-          style={{ padding:"6px 10px", borderRadius:6, border:"1px solid #CFD8DC",
-            fontSize:12, background:"#fff" }}>
+          style={{padding:"6px 10px",borderRadius:6,border:"1px solid #CFD8DC",fontSize:12,background:"#fff"}}>
           <option value="">Alle types</option>
           {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
         </select>
         <select value={filterLeider} onChange={e=>setFilterLeider(e.target.value)}
-          style={{ padding:"6px 10px", borderRadius:6,
-            border: filterLeider?"1px solid #1565C0":"1px solid #90CAF9",
-            fontSize:12, background:"#fff",
-            color: filterLeider?"#1565C0":"#546E7A",
-            fontWeight: filterLeider?700:400 }}>
+          style={{padding:"6px 10px",borderRadius:6,fontSize:12,background:"#fff",
+            border:filterLeider?"1px solid #1565C0":"1px solid #90CAF9",
+            color:filterLeider?"#1565C0":"#546E7A",fontWeight:filterLeider?700:400}}>
           <option value="">👷 Alle medewerkers</option>
           {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
         </select>
-
-        <span style={{ fontSize:12, color:"#78909C", marginLeft:4 }}>
-          {visibleProjects.length} project{visibleProjects.length!==1?"en":""}
-          {overlapSet.size>0 && (
-            <span style={{ marginLeft:8, background:"#FFEBEE", color:"#B71C1C",
-              border:"1px solid #EF9A9A", borderRadius:4, padding:"1px 7px",
-              fontSize:11, fontWeight:700 }}>
-              ⚠️ {overlapSet.size/2|0} overlappingen
-            </span>
-          )}
+        <span style={{fontSize:12,color:"#78909C"}}>
+          {allProjects.length} projecten
+          {overlapIds.size>0&&<span style={{marginLeft:8,background:"#FFEBEE",color:"#B71C1C",
+            border:"1px solid #EF9A9A",borderRadius:4,padding:"1px 7px",fontSize:11,fontWeight:700}}>
+            ⚠️ {overlapIds.size/2|0} overlappingen</span>}
         </span>
       </div>
 
-      {/* ── GANTT ── één scrollbare container, sticky naam-kolom ── */}
-      <div ref={timelineRef}
-        style={{ overflowX:"scroll", overflowY:"auto", borderRadius:10,
-          border:"1px solid #DDE3E9", boxShadow:"0 2px 12px rgba(0,0,0,.07)",
-          background:"#fff", cursor:"grab", userSelect:"none",
-          WebkitOverflowScrolling:"touch" }}
+      {/* GANTT */}
+      <div ref={scrollRef}
+        style={{overflowX:"scroll",borderRadius:10,border:"1px solid #DDE3E9",
+          boxShadow:"0 2px 12px rgba(0,0,0,.07)",background:"#fff",
+          cursor:"grab",userSelect:"none"}}
         onMouseDown={e=>{
-          if (isDraggingBar.current) return;
-          if (e.target.closest && e.target.closest("[data-gantt-bar]")) return;
-          const el = timelineRef.current;
-          if (!el) return;
-          const startX = e.pageX;
-          const startScroll = el.scrollLeft;
+          if(dragRef.current.active) return;
+          if(e.target.closest&&e.target.closest("[data-bar]")) return;
+          const el=scrollRef.current; const sx=e.pageX; const sl=el.scrollLeft;
           e.preventDefault();
-          function mv(ev) {
-            if (isDraggingBar.current) return;
-            el.scrollLeft = startScroll - (ev.pageX - startX);
-            el.style.cursor = "grabbing";
-          }
-          function up() {
-            el.style.cursor = "grab";
-            document.removeEventListener("mousemove", mv);
-            document.removeEventListener("mouseup", up);
-          }
-          document.addEventListener("mousemove", mv);
-          document.addEventListener("mouseup", up);
+          function mv(ev){el.scrollLeft=sl-(ev.pageX-sx); el.style.cursor="grabbing";}
+          function up(){el.style.cursor="grab"; document.removeEventListener("mousemove",mv); document.removeEventListener("mouseup",up);}
+          document.addEventListener("mousemove",mv); document.addEventListener("mouseup",up);
         }}>
 
-        {/* min-width zodat tabel breed genoeg is om te scrollen */}
-        <div style={{ minWidth: NAME_W + cols.length * COL_W }}>
+        <div style={{minWidth:NAME_W+totalW}}>
 
-          {/* ── HEADER RIJ 1: maand/jaar spans ── */}
-          <div style={{ display:"flex", background:"#0D1B2A", color:"#fff",
-            position:"sticky", top:0, zIndex:10 }}>
-            <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
-              position:"sticky", left:0, zIndex:11, background:"#0D1B2A",
-              padding:"0 10px", height:HEADER_H, display:"flex", alignItems:"center",
-              fontWeight:800, fontSize:11, borderRight:"3px solid #263547" }}>
+          {/* Header rij 1: jaar/maand groepen */}
+          <div style={{display:"flex",background:"#0D1B2A",color:"#fff",position:"sticky",top:0,zIndex:10}}>
+            <div style={{width:NAME_W,minWidth:NAME_W,flexShrink:0,position:"sticky",left:0,zIndex:11,
+              background:"#0D1B2A",padding:"4px 12px",display:"flex",alignItems:"center",
+              fontWeight:800,fontSize:11,borderRight:"2px solid #263547"}}>
               🏗️ Project / Team
             </div>
-            {headerGroups.map((g,i) => (
-              <div key={i} style={{ width:g.count*COL_W, flexShrink:0,
-                textAlign:"center", height:HEADER_H,
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontWeight:700, fontSize:11,
-                borderLeft: i>0 ? "1px solid #263547" : "none" }}>
+            {hg.map((g,i)=>(
+              <div key={i} style={{width:g.count*COL_W,flexShrink:0,textAlign:"center",
+                padding:"4px 0",fontWeight:700,fontSize:11,
+                borderLeft:i>0?"1px solid #263547":"none"}}>
                 {g.label}
               </div>
             ))}
           </div>
 
-          {/* ── HEADER RIJ 2: dag/week/maand labels ── */}
-          <div style={{ display:"flex", background:"#1C2B3A", color:"#fff",
-            position:"sticky", top:HEADER_H, zIndex:10,
-            borderBottom:"2px solid #0D1B2A" }}>
-            <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
-              position:"sticky", left:0, zIndex:11, background:"#1C2B3A",
-              padding:"0 10px", height:HEADER_H, display:"flex", alignItems:"center",
-              fontSize:9, color:"#90A4AE", fontWeight:600,
-              borderRight:"3px solid #0D1B2A" }}>
-              ← sleep tijdlijn →
+          {/* Header rij 2: kolom labels */}
+          <div style={{display:"flex",background:"#1C2B3A",color:"#fff",position:"sticky",top:22,zIndex:10,borderBottom:"2px solid #0D1B2A"}}>
+            <div style={{width:NAME_W,minWidth:NAME_W,flexShrink:0,position:"sticky",left:0,zIndex:11,
+              background:"#1C2B3A",padding:"3px 12px",display:"flex",alignItems:"center",
+              fontSize:9,color:"#90A4AE",borderRight:"2px solid #0D1B2A"}}>
+              ← sleep tijdlijn → &nbsp;·&nbsp; klik naam of 👷 om te wijzigen
             </div>
-            {cols.map((c,i) => (
-              <div key={i} style={{ width:COL_W, minWidth:COL_W, flexShrink:0,
-                textAlign:"center", height:HEADER_H,
-                display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-                background: c.isToday?"#E65100":(c.isWeekend?"#263547":"#1C2B3A"),
-                borderLeft: i===0?"none":"1px solid #263547",
-                fontSize:10, fontWeight:c.isToday?800:500 }}>
+            {cols.map((c,i)=>(
+              <div key={i} style={{width:COL_W,minWidth:COL_W,flexShrink:0,textAlign:"center",
+                padding:"3px 1px",fontSize:10,fontWeight:c.isToday?800:500,
+                background:c.isToday?"#E65100":c.isWeekend?"#263547":"#1C2B3A",
+                borderLeft:i===0?"none":"1px solid #263547"}}>
                 <div>{c.label}</div>
-                {c.subLabel && viewMode!=="month" && viewMode!=="year" &&
-                  <div style={{ fontSize:8, opacity:.7 }}>{c.subLabel}</div>}
+                {c.sub&&viewMode!=="month"&&viewMode!=="year"&&<div style={{fontSize:8,opacity:.7}}>{c.sub}</div>}
               </div>
             ))}
           </div>
 
-          {/* ── PROJECT RIJEN ── */}
-          {visibleProjects.length === 0 ? (
-            <div style={{ padding:40, textAlign:"center", color:"#90A4AE", fontSize:13 }}>
-              Geen projecten in deze periode
-            </div>
-          ) : visibleProjects.map((p, pi) => {
-            const bar      = getBar(p);
-            const color    = PROJ_COLORS[pi % PROJ_COLORS.length];
-            const typeInfo = PROJECT_TYPES.find(t=>t.label===p.type);
-            const hasOverlap = overlapSet.has(p.id);
-            const defaultWeken = p.type==="Dakopbouw"?8: p.type==="Dakkapel"?1:4;
-            const wekenNum = parseInt(p.weken)||defaultWeken;
-
+          {/* Project rijen */}
+          {allProjects.map((p,pi)=>{
+            const color=PROJ_COLORS[pi%PROJ_COLORS.length];
+            const bar=getBar(p);
+            const ti=PROJECT_TYPES.find(t=>t.label===p.type);
+            const ov=overlapIds.has(p.id);
+            const def=p.type==="Dakopbouw"?8:p.type==="Dakkapel"?1:4;
+            const wk=parseInt(p.weken)||def;
             return (
-              <div key={p.id} style={{ display:"flex", minHeight:ROW_H,
-                background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
-                borderBottom:"1px solid #F0F2F5" }}
-                onMouseEnter={e=>e.currentTarget.style.background=hasOverlap?"#FFEBEE":"#EBF3FF"}
-                onMouseLeave={e=>e.currentTarget.style.background=hasOverlap?"#FFF5F5":pi%2===0?"#FAFBFC":"#fff"}>
+              <div key={p.id} style={{display:"flex",minHeight:ROW_H,
+                background:ov?"#FFF5F5":pi%2===0?"#FAFBFC":"#fff",
+                borderBottom:"1px solid #F0F2F5"}}
+                onMouseEnter={e=>e.currentTarget.style.background=ov?"#FFEBEE":"#EBF3FF"}
+                onMouseLeave={e=>e.currentTarget.style.background=ov?"#FFF5F5":pi%2===0?"#FAFBFC":"#fff"}>
 
-                {/* NAAM CEL — sticky */}
-                <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
-                  position:"sticky", left:0, zIndex:4,
-                  background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
-                  borderRight:"3px solid #DDE3E9",
-                  borderLeft:"3px solid "+color,
-                  padding:"5px 7px", display:"flex", alignItems:"flex-start",
-                  boxSizing:"border-box" }}>
-                  <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", gap:3 }}>
-                    {/* naam */}
-                    {editNaam===p.id ? (
-                      <input autoFocus defaultValue={p.name}
-                        style={{ width:"100%", fontSize:10, fontWeight:700, padding:"1px 4px",
-                          borderRadius:3, border:"1px solid #E65100", outline:"none", boxSizing:"border-box" }}
-                        onKeyDown={e=>{ if(e.key==="Enter") saveNaam(p.id,e.target.value); if(e.key==="Escape") setEditNaam(null); }}
-                        onBlur={e=>saveNaam(p.id,e.target.value)} />
-                    ) : (
-                      <div onClick={()=>setEditNaam(p.id)}
-                        style={{ fontWeight:700, fontSize:10, color:"#1C2B3A", cursor:"text",
-                          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                        {p.name}
-                      </div>
-                    )}
-                    {/* badges: type + weken + team knop */}
-                    <div style={{ display:"flex", gap:3, alignItems:"center", flexWrap:"nowrap" }}>
-                      {typeInfo && (
-                        <span style={{ fontSize:8, fontWeight:700, flexShrink:0,
-                          background:typeInfo.bg, color:typeInfo.text,
-                          border:`1px solid ${typeInfo.border}`, borderRadius:3, padding:"0 4px" }}>
-                          {typeInfo.label}
-                        </span>
-                      )}
-                      {editWeken===p.id ? (
-                        <input defaultValue={wekenNum} autoFocus type="number" min="1" max="52"
-                          style={{ width:34, fontSize:9, padding:"1px 3px", borderRadius:3,
-                            border:"1px solid #E65100", outline:"none", textAlign:"center" }}
-                          onKeyDown={e=>{ if(e.key==="Enter") saveWeken(p.id,e.target.value); if(e.key==="Escape") setEditWeken(null); }}
-                          onBlur={e=>saveWeken(p.id,e.target.value)} />
-                      ) : (
-                        <span onClick={e=>{ e.stopPropagation(); setEditWeken(p.id); }}
-                          style={{ fontSize:9, color:"#fff", flexShrink:0, cursor:"pointer",
-                            background: p.type==="Dakopbouw"?"#6A1B9A":p.type==="Dakkapel"?"#2E7D32":color,
-                            borderRadius:3, padding:"1px 5px", fontWeight:700 }}>
-                          {wekenNum}w
-                        </span>
-                      )}
-                      {hasOverlap && <span style={{ fontSize:9, color:"#B71C1C" }}>⚠️</span>}
-                      {/* Team knop */}
-                      <span onClick={e=>{ e.stopPropagation(); setEditTeamTs(editTeamTs===p.id ? null : p.id); }}
-                        style={{ fontSize:9, cursor:"pointer", flexShrink:0,
-                          background: (p.leider||p.collega)?"#E3F2FD":"#F5F5F5",
-                          color: (p.leider||p.collega)?"#1565C0":"#90A4AE",
-                          border: (p.leider||p.collega)?"1px solid #90CAF9":"1px dashed #BDBDBD",
-                          borderRadius:3, padding:"1px 5px", fontWeight:600 }}>
-                        👷 {p.leider||p.collega ? [p.leider,p.collega].filter(Boolean).join(" & ") : "Team"}
-                      </span>
+                {/* Naam kolom — sticky */}
+                <div style={{width:NAME_W,minWidth:NAME_W,flexShrink:0,
+                  position:"sticky",left:0,zIndex:4,
+                  background:ov?"#FFF5F5":pi%2===0?"#FAFBFC":"#fff",
+                  borderRight:"2px solid #DDE3E9",borderLeft:"3px solid "+color,
+                  padding:"5px 8px",boxSizing:"border-box"}}>
+
+                  {/* Naam */}
+                  {editNaam===p.id?(
+                    <input autoFocus defaultValue={p.name}
+                      style={{width:"100%",fontSize:11,fontWeight:700,padding:"2px 4px",
+                        borderRadius:3,border:"1px solid #E65100",outline:"none",boxSizing:"border-box"}}
+                      onKeyDown={e=>{if(e.key==="Enter")saveNaam(p.id,e.target.value);if(e.key==="Escape")setEditNaam(null);}}
+                      onBlur={e=>saveNaam(p.id,e.target.value)}/>
+                  ):(
+                    <div onClick={()=>setEditNaam(p.id)} title="Klik om naam te wijzigen"
+                      style={{fontWeight:700,fontSize:11,color:"#1C2B3A",cursor:"text",
+                        whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",marginBottom:3}}>
+                      {p.name}
                     </div>
-                    {/* Team popup */}
-                    {editTeamTs===p.id && ReactDOM.createPortal(
-                      <div style={{ position:"fixed", inset:0, zIndex:9998 }}
-                        onMouseDown={()=>setEditTeamTs(null)}>
-                        <div style={{ position:"fixed",
-                          top: "50%", left: "50%", transform:"translate(-50%,-50%)",
-                          background:"#fff", borderRadius:10, padding:16,
-                          border:"2px solid #90CAF9", boxShadow:"0 8px 32px rgba(0,0,0,.25)",
-                          minWidth:260, zIndex:9999 }}
-                          onMouseDown={e=>e.stopPropagation()}>
-                          <div style={{ fontWeight:700, fontSize:13, color:"#1C2B3A", marginBottom:12 }}>
-                            👷 Team — {p.name.split(" ").slice(0,3).join(" ")}
-                          </div>
-                          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                            <div>
-                              <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>
-                                👷 Projectleider
-                              </label>
-                              <select value={p.leider||""} onChange={e=>saveLeider(p.id,e.target.value)}
-                                style={{ width:"100%", fontSize:12, padding:"6px 8px", borderRadius:5,
-                                  border:"1px solid #90CAF9", background:"#fff" }}>
-                                <option value="">— geen —</option>
-                                {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>
-                                👷 Collega
-                              </label>
-                              <select value={p.collega||""} onChange={e=>saveCollega(p.id,e.target.value)}
-                                style={{ width:"100%", fontSize:12, padding:"6px 8px", borderRadius:5,
-                                  border:"1px solid #A5D6A7", background:"#fff" }}>
-                                <option value="">— geen —</option>
-                                {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
-                              </select>
-                            </div>
-                            <button onClick={()=>setEditTeamTs(null)}
-                              style={{ marginTop:4, padding:"8px", borderRadius:6, border:"none",
-                                background:"#E65100", color:"#fff", fontWeight:700, fontSize:12, cursor:"pointer" }}>
-                              ✓ Klaar
-                            </button>
-                          </div>
-                        </div>
-                      </div>,
-                      document.body
+                  )}
+
+                  {/* Badges + team knop */}
+                  <div style={{display:"flex",gap:3,alignItems:"center",flexWrap:"nowrap"}}>
+                    {ti&&<span style={{fontSize:8,fontWeight:700,flexShrink:0,
+                      background:ti.bg,color:ti.text,border:`1px solid ${ti.border}`,
+                      borderRadius:3,padding:"0 4px"}}>{ti.label}</span>}
+
+                    {editWeken===p.id?(
+                      <input defaultValue={wk} autoFocus type="number" min="1" max="52"
+                        style={{width:34,fontSize:9,padding:"1px 3px",borderRadius:3,
+                          border:"1px solid #E65100",outline:"none",textAlign:"center"}}
+                        onKeyDown={e=>{if(e.key==="Enter")saveWeken(p.id,e.target.value);if(e.key==="Escape")setEditWeken(null);}}
+                        onBlur={e=>saveWeken(p.id,e.target.value)}/>
+                    ):(
+                      <span onClick={e=>{e.stopPropagation();setEditWeken(p.id);}}
+                        title="Klik om weken te wijzigen"
+                        style={{fontSize:9,color:"#fff",flexShrink:0,cursor:"pointer",fontWeight:700,
+                          background:p.type==="Dakopbouw"?"#6A1B9A":p.type==="Dakkapel"?"#2E7D32":color,
+                          borderRadius:3,padding:"1px 5px"}}>
+                        {wk}w
+                      </span>
                     )}
+
+                    {ov&&<span style={{fontSize:9,color:"#B71C1C"}}>⚠️</span>}
+
+                    {/* 👷 Team knop */}
+                    <button onClick={e=>{e.stopPropagation();setTeamPid(p.id);setTeamLeider(p.leider||"");setTeamCollega(p.collega||"");}}
+                      style={{fontSize:9,cursor:"pointer",flexShrink:0,border:"none",
+                        background:(p.leider||p.collega)?"#E3F2FD":"#F5F5F5",
+                        color:(p.leider||p.collega)?"#1565C0":"#90A4AE",
+                        borderRadius:3,padding:"2px 6px",fontWeight:600}}>
+                      👷 {(p.leider||p.collega)?[p.leider,p.collega].filter(Boolean).join(" & "):"Team"}
+                    </button>
                   </div>
                 </div>
 
-                {/* TIJDLIJN CEL */}
-                <div style={{ position:"relative", flex:1,
-                  minWidth: cols.length * COL_W, minHeight:ROW_H }}>
-
-                  {/* kolom achtergronden */}
-                  {cols.map((c,ci) => (
-                    <div key={ci} style={{ position:"absolute", left:ci*COL_W, top:0,
-                      width:COL_W, height:"100%", boxSizing:"border-box",
-                      background: c.isToday?"rgba(230,81,0,.07)":(c.isWeekend?"rgba(0,0,0,.02)":"transparent"),
-                      borderLeft: c.isToday?"2px solid rgba(230,81,0,.5)":"1px solid #F0F2F5" }}/>
+                {/* Tijdlijn */}
+                <div style={{position:"relative",flex:1,minWidth:totalW}}>
+                  {cols.map((c,ci)=>(
+                    <div key={ci} style={{position:"absolute",left:ci*COL_W,top:0,
+                      width:COL_W,height:"100%",boxSizing:"border-box",
+                      background:c.isToday?"rgba(230,81,0,.07)":c.isWeekend?"rgba(0,0,0,.02)":"transparent",
+                      borderLeft:c.isToday?"2px solid rgba(230,81,0,.5)":"1px solid #F0F2F5"}}/>
                   ))}
-
-                  {/* vandaag lijn */}
-                  {(() => {
-                    for (let ci=0; ci<cols.length; ci++) {
-                      const {start,end} = cols[ci];
-                      if (today>=start && today<=end) {
-                        const frac=(today-start)/(end-start+86400000);
-                        return <div style={{ position:"absolute", left:ci*COL_W+frac*COL_W,
-                          top:0, bottom:0, width:2, background:"#E65100", zIndex:3, pointerEvents:"none" }}/>;
-                      }
-                    }
-                    return null;
-                  })()}
-
-                  {/* gantt balk */}
-                  {bar && (()=>{
-                    const left  = bar.startIdx*COL_W + bar.startFrac*COL_W;
-                    const right = (cols.length - bar.endIdx - 1)*COL_W + (1-bar.endFrac)*COL_W;
-                    const width = cols.length*COL_W - left - right;
-                    const isDragging = dragging?.pid === p.id;
+                  {/* Vandaag lijn */}
+                  {cols.map((c,ci)=>today>=c.start&&today<=c.end?(
+                    <div key="today" style={{position:"absolute",
+                      left:ci*COL_W+(today-c.start)/(c.end-c.start+86400000)*COL_W,
+                      top:0,bottom:0,width:2,background:"#E65100",zIndex:3,pointerEvents:"none"}}/>
+                  ):null)}
+                  {/* Balk */}
+                  {bar&&(()=>{
+                    const l=bar.si*COL_W+bar.sf*COL_W;
+                    const w=totalW-l-((cols.length-bar.ei-1)*COL_W+(1-bar.ef)*COL_W);
                     return (
-                      <div data-gantt-bar="1"
-                        onMouseDown={e=>{ e.stopPropagation(); startDrag(e, p); }}
-                        style={{ position:"absolute", left, width:Math.max(width,6),
-                          top:"50%", transform:"translateY(-50%)",
-                          height:ROW_H-6, borderRadius:4, zIndex:2,
-                          background:`linear-gradient(90deg,${color}ee,${color}bb)`,
-                          boxShadow:isDragging?`0 4px 16px ${color}99`:`0 2px 6px ${color}44`,
-                          display:"flex", alignItems:"center", overflow:"visible",
-                          cursor:"grab", opacity:isDragging?.9:1,
-                          outline:isDragging?`2px solid ${color}`:"none" }}
-                        title={`${p.name} · ${p.date} · ${wekenNum}w
-↔ Sleep balk om datum te wijzigen`}>
-                        {isDragging && (
-                          <span style={{ position:"absolute", top:-20, left:0, zIndex:20,
-                            background:"#1C2B3A", color:"#fff", fontSize:9, fontWeight:700,
-                            padding:"2px 7px", borderRadius:4, whiteSpace:"nowrap" }}>
-                            📅 {p.date}
-                          </span>
-                        )}
-                        {width>40 && (
-                          <span style={{ fontSize:9, color:"#fff", fontWeight:700,
-                            paddingLeft:6, whiteSpace:"nowrap", overflow:"hidden",
-                            textOverflow:"ellipsis", maxWidth:width-14, pointerEvents:"none" }}>
-                            {p.name.split(" ").slice(0,2).join(" ")}
-                          </span>
-                        )}
-                        <div style={{ position:"absolute",left:0,top:0,bottom:0,width:5,
-                          background:"rgba(255,255,255,.4)",borderRadius:"4px 0 0 4px" }}/>
-                        <div style={{ position:"absolute",right:0,top:0,bottom:0,width:5,
-                          background:"rgba(0,0,0,.15)",borderRadius:"0 4px 4px 0" }}/>
+                      <div data-bar="1" onMouseDown={e=>startDrag(e,p)}
+                        style={{position:"absolute",left:l,width:Math.max(w,6),
+                          top:"50%",transform:"translateY(-50%)",height:ROW_H-10,
+                          borderRadius:4,zIndex:2,cursor:"grab",
+                          background:`linear-gradient(90deg,${color}ee,${color}99)`,
+                          boxShadow:`0 2px 6px ${color}44`,
+                          display:"flex",alignItems:"center",overflow:"hidden"}}
+                        title={`${p.name} · ${p.date} · ${wk} weken`}>
+                        {w>50&&<span style={{fontSize:9,color:"#fff",fontWeight:700,
+                          paddingLeft:7,whiteSpace:"nowrap",overflow:"hidden",
+                          textOverflow:"ellipsis",maxWidth:w-16,pointerEvents:"none"}}>
+                          {p.name.split(" ").slice(0,2).join(" ")}
+                        </span>}
+                        <div style={{position:"absolute",left:0,top:0,bottom:0,width:4,
+                          background:"rgba(255,255,255,.4)",borderRadius:"4px 0 0 4px"}}/>
                       </div>
                     );
                   })()}
@@ -3023,1041 +2740,70 @@ function Tijdschema({ projects, setProjects }) {
         </div>
       </div>
 
-      {/* ── LEGEND ── */}
-      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:14 }}>
-        {Object.entries(STATUS_META).filter(([k])=>k).map(([k,v]) => (
-          <span key={k} style={{ background:v.bg, color:v.text, border:`1px solid ${v.border}`,
-            padding:"2px 8px", borderRadius:4, fontSize:10, fontWeight:600 }}>{k}</span>
-        ))}
+      {/* Legenda */}
+      <div style={{marginTop:10,display:"flex",gap:14,flexWrap:"wrap",fontSize:11,color:"#78909C",alignItems:"center"}}>
+        <span>← Sleep tijdlijn</span>
+        <span>↔ Sleep balk = datum verplaatsen</span>
+        <div style={{width:14,height:10,background:"rgba(230,81,0,.15)",border:"2px solid rgba(230,81,0,.4)",borderRadius:2}}/> <span>Vandaag</span>
+        <div style={{width:14,height:10,background:"#FFF5F5",border:"1px solid #FFCDD2",borderRadius:2,borderLeft:"3px solid #E53935"}}/> <span>Overlapping</span>
+        <span style={{background:"#E65100",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>4w</span> <span>klik = weken wijzigen</span>
+        <span style={{background:"#E3F2FD",color:"#1565C0",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:600}}>👷 Team</span> <span>klik = personeel wijzigen</span>
       </div>
 
-      {/* ── AFGERONDE PROJECTEN ── */}
-      {openMonth === -1 && (
-        <div style={{ marginBottom:24 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-            <div style={{ background:"#2E7D32", color:"#fff", borderRadius:8,
-              padding:"5px 18px", fontWeight:800, fontSize:14 }}>✅ Afgeronde projecten</div>
-            <div style={{ background:"#E8F5E9", color:"#2E7D32", borderRadius:6,
-              padding:"2px 10px", fontSize:12, fontWeight:700 }}>
-              {afgerondProjects.length} project{afgerondProjects.length!==1?"en":""}
+      {/* Team popup */}
+      {teamPid && ReactDOM.createPortal(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:9998,
+          display:"flex",alignItems:"center",justifyContent:"center"}}
+          onMouseDown={()=>setTeamPid(null)}>
+          <div style={{background:"#fff",borderRadius:12,padding:24,width:300,
+            boxShadow:"0 8px 40px rgba(0,0,0,.3)",border:"2px solid #90CAF9"}}
+            onMouseDown={e=>e.stopPropagation()}>
+            <div style={{fontWeight:800,fontSize:14,color:"#1C2B3A",marginBottom:16}}>
+              👷 Team indeling
             </div>
-            <div style={{ flex:1, height:2, background:"#F0F2F5" }}/>
+            <div style={{fontSize:12,color:"#546E7A",marginBottom:16,fontWeight:500}}>
+              {projects.find(p=>p.id===teamPid)?.name}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div>
+                <label style={{fontSize:11,fontWeight:600,color:"#1565C0",display:"block",marginBottom:4}}>
+                  👷 Projectleider
+                </label>
+                <select value={teamLeider} onChange={e=>setTeamLeider(e.target.value)}
+                  style={{width:"100%",fontSize:13,padding:"8px 10px",borderRadius:6,
+                    border:"2px solid #90CAF9",background:"#fff",outline:"none"}}>
+                  <option value="">— Geen —</option>
+                  {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:600,color:"#2E7D32",display:"block",marginBottom:4}}>
+                  👷 Collega
+                </label>
+                <select value={teamCollega} onChange={e=>setTeamCollega(e.target.value)}
+                  style={{width:"100%",fontSize:13,padding:"8px 10px",borderRadius:6,
+                    border:"2px solid #A5D6A7",background:"#fff",outline:"none"}}>
+                  <option value="">— Geen —</option>
+                  {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:20}}>
+              <button onClick={()=>saveTeam(teamPid)}
+                style={{flex:1,padding:"10px",borderRadius:7,border:"none",
+                  background:"#E65100",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer"}}>
+                ✓ Opslaan
+              </button>
+              <button onClick={()=>setTeamPid(null)}
+                style={{padding:"10px 16px",borderRadius:7,border:"1px solid #DDE3E9",
+                  background:"#F5F7FA",color:"#546E7A",fontWeight:600,fontSize:13,cursor:"pointer"}}>
+                Annuleer
+              </button>
+            </div>
           </div>
-          {afgerondProjects.length === 0 ? (
-            <div style={{ fontSize:13, color:"#90A4AE", fontStyle:"italic", padding:16,
-              background:"#F5F7FA", borderRadius:8 }}>Nog geen afgeronde projecten.</div>
-          ) : (
-            <div style={{ overflowX:"auto", borderRadius:8, border:"1px solid #C8E6C9" }}>
-              <table style={{ borderCollapse:"collapse", width:"100%", minWidth:2200, fontSize:12 }}>
-                <thead>
-                  <tr style={{ background:"#2E7D32", color:"#fff", position:"sticky", top:0, zIndex:2 }}>
-                    <th style={{ ...TH, minWidth:200, textAlign:"left", padding:"10px 12px",
-                      position:"sticky", left:0, background:"#2E7D32", zIndex:3 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <span>Project</span>
-                        <div style={{ display:"flex", alignItems:"center", gap:5,
-                          background:"rgba(255,255,255,.15)", borderRadius:5,
-                          padding:"2px 8px", fontSize:10, fontWeight:500 }}>
-                          <div style={{ width:14, height:14, borderRadius:3,
-                            border:"2px solid #fff", background:"#7CB342",
-                            display:"flex", alignItems:"center", justifyContent:"center",
-                            fontSize:10, color:"#fff", fontWeight:900 }}>✓</div>
-                          <span style={{ opacity:.9 }}>= klik om te heropenen</span>
-                        </div>
-                      </div>
-                    </th>
-                    {COLUMNS.map(c => <th key={c} style={{ ...TH, minWidth:88 }}>{c}</th>)}
-                    {canEdit && <th style={{ ...TH, width:48 }}>Del</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {afgerondProjects.map((p,ri) => <ProjectRow key={p.id} p={p} ri={ri} />)}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        </div>,
+        document.body
       )}
-
-      {/* ── ACTIEVE PROJECTEN PER MAAND ── */}
-      {openMonth !== -1 && (
-        <>
-          {monthsToShow.map(mi => (
-            <MonthTable key={mi} list={byMonth[mi]}
-              label={`${YEAR_MONTHS[mi]} 2026`} headerBg="#1C2B3A" />
-          ))}
-          {noDate.length > 0 && openMonth === null && (
-            <MonthTable list={noDate} label="Geen datum" headerBg="#78909C" />
-          )}
-        </>
-      )}
-
-      <div style={{ marginTop:8, fontSize:11, color:"#90A4AE" }}>
-        {activeProjects.length} actieve · {afgerondProjects.length} afgerond
-        {canEdit && " · Klik het vakje naast een project om het af te vinken"}
-      </div>
-    </div>
-  );
-}
-
-// ── JAARPLANNING ──────────────────────────────────────────────────────
-function Jaarplanning({ projects, setProjects, onProjectClick }) {
-  const [year,       setYear]       = useState(2026);
-  const [openMonth,  setOpenMonth]  = useState(null); // null = all, 0-11 = specific
-  const [editDate,   setEditDate]   = useState(null); // pid being date-edited
-
-  function parseDate(d="") {
-    // Try dd-mm-yyyy or d-m-yyyy
-    const full = d.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
-    if (full) return { day:parseInt(full[1]), month:parseInt(full[2])-1, year:parseInt(full[3]) };
-    // Try dd-mm (assume current year)
-    const short = d.match(/^(\d{1,2})[-./](\d{1,2})$/);
-    if (short) return { day:parseInt(short[1]), month:parseInt(short[2])-1, year:2026 };
-    return null;
-  }
-
-  function projYear(p) {
-    const pd = parseDate(p.date);
-    return pd ? pd.year : 2026;
-  }
-
-  function projMonthIdx(p) {
-    const pd = parseDate(p.date);
-    if (!pd || pd.year !== year) return null;
-    return pd.month;
-  }
-
-  // Sort projects by date
-  function sortKey(p) {
-    const pd = parseDate(p.date);
-    if (!pd) return 99999;
-    return pd.year * 10000 + pd.month * 100 + pd.day;
-  }
-
-  const counts = Array(12).fill(0);
-  projects.forEach(p => {
-    const m = projMonthIdx(p);
-    if (m !== null && m >= 0 && m < 12) counts[m]++;
-  });
-  const maxC = Math.max(...counts, 1);
-
-  const byMonth = Array(12).fill(null).map(() => []);
-  [...projects].sort((a,b) => sortKey(a)-sortKey(b)).forEach(p => {
-    const m = projMonthIdx(p);
-    if (m !== null && m >= 0 && m < 12) byMonth[m].push(p);
-  });
-
-  async function updateDate(pid, newDate) {
-    const updated = projects.map(p => p.id===pid ? {...p, date:newDate} : p);
-    setProjects(updated);
-    await saveData("bouw_projects", updated);
-    setEditDate(null);
-  }
-
-  const monthsToShow = openMonth !== null ? [openMonth] : Array.from({length:12},(_,i)=>i);
-  const totalYear = projects.filter(p => projYear(p) === year).length;
-
-  return (
-    <div>
-      {/* header */}
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, flexWrap:"wrap" }}>
-        <Btn variant="ghost" style={{ padding:"6px 12px" }} onClick={()=>{ setYear(y=>y-1); setOpenMonth(null); }}>◀</Btn>
-        <h3 style={{ margin:0, fontSize:18, color:"#1C2B3A" }}>Jaarplanning {year}</h3>
-        <Btn variant="ghost" style={{ padding:"6px 12px" }} onClick={()=>{ setYear(y=>y+1); setOpenMonth(null); }}>▶</Btn>
-        <span style={{ fontSize:12, color:"#78909C", marginLeft:4 }}>{totalYear} projecten totaal</span>
-        {openMonth !== null && (
-          <Btn variant="ghost" style={{ padding:"5px 12px", fontSize:12 }}
-            onClick={()=>setOpenMonth(null)}>✕ Toon alle maanden</Btn>
-        )}
-      </div>
-
-      {/* clickable bar chart */}
-      <div style={{ background:"#fff", border:"1px solid #DDE3E9", borderRadius:10,
-        padding:"16px", marginBottom:24 }}>
-        <div style={{ fontSize:11, color:"#90A4AE", marginBottom:8, fontWeight:600 }}>
-          Klik op een maand om in te zoomen
-        </div>
-        <div style={{ display:"flex", gap:4, alignItems:"flex-end", height:90 }}>
-          {counts.map((c,i) => {
-            const isActive = openMonth === i;
-            const hasProj  = c > 0;
-            return (
-              <div key={i} onClick={()=> hasProj && setOpenMonth(openMonth===i ? null : i)}
-                style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center",
-                  gap:3, cursor:hasProj?"pointer":"default" }}>
-                <div style={{ fontSize:11, fontWeight:800,
-                  color: isActive ? "#E65100" : (hasProj ? "#1C2B3A" : "#BDBDBD") }}>
-                  {c||""}
-                </div>
-                <div style={{
-                  width:"100%",
-                  background: isActive ? "#E65100" : (hasProj ? "#FFAB76" : "#ECEFF1"),
-                  borderRadius:"4px 4px 0 0",
-                  height: Math.max((c/maxC)*64, c?6:0),
-                  transition:"all .2s",
-                  border: isActive ? "2px solid #BF360C" : "none",
-                  boxSizing:"border-box"
-                }}/>
-                <div style={{ fontSize:10, fontWeight: isActive?800:500,
-                  color: isActive?"#E65100":"#78909C" }}>
-                  {YEAR_MONTHS[i]}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* month sections */}
-      {monthsToShow.map(mi => {
-        const ps = byMonth[mi];
-        if (ps.length === 0) return null;
-        return (
-          <div key={mi} style={{ marginBottom:24 }}>
-            {/* month header */}
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
-              <div style={{ background:"#1C2B3A", color:"#fff", borderRadius:8,
-                padding:"5px 18px", fontWeight:800, fontSize:14, letterSpacing:.5 }}>
-                {YEAR_MONTHS[mi]} {year}
-              </div>
-              <div style={{ background:"#FFF3E0", color:"#E65100", borderRadius:6,
-                padding:"3px 10px", fontSize:12, fontWeight:700 }}>
-                {ps.length} project{ps.length>1?"en":""}
-              </div>
-              {(() => {
-                const totaal = ps.reduce((sum, p) => sum + (Number(p.bedrag)||0), 0);
-                return totaal > 0 ? (
-                  <div style={{ background:"#E8F5E9", color:"#2E7D32", borderRadius:6,
-                    padding:"3px 10px", fontSize:12, fontWeight:700 }}>
-                    💶 € {totaal.toLocaleString("nl-NL")}
-                  </div>
-                ) : null;
-              })()}
-              <div style={{ flex:1, height:2, background:"#F0F2F5", borderRadius:1 }}/>
-            </div>
-
-            {/* project cards */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:10 }}>
-              {ps.map(p => (
-                <div key={p.id}
-                  onClick={()=>onProjectClick(p.id)}
-                  style={{ background:"#fff", borderRadius:10,
-                    border:"1px solid #DDE3E9", padding:"12px 14px",
-                    borderTop:"3px solid #E65100",
-                    boxShadow:"0 1px 4px rgba(0,0,0,.05)",
-                    cursor:"pointer", transition:"box-shadow .15s, transform .15s" }}
-                  onMouseEnter={e=>{ e.currentTarget.style.boxShadow="0 4px 16px rgba(230,81,0,.18)"; e.currentTarget.style.transform="translateY(-2px)"; }}
-                  onMouseLeave={e=>{ e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.05)"; e.currentTarget.style.transform="translateY(0)"; }}>
-
-                  {/* project name */}
-                  <div style={{ fontWeight:800, fontSize:13, color:"#1C2B3A", marginBottom:4 }}>
-                    📍 {p.name}
-                  </div>
-                  {p.type && (() => {
-                    const t = PROJECT_TYPES.find(t=>t.label===p.type);
-                    return t ? (
-                      <span style={{ display:"inline-block", fontSize:10, fontWeight:700,
-                        background:t.bg, color:t.text, border:`1px solid ${t.border}`,
-                        borderRadius:4, padding:"1px 7px", marginBottom:4 }}>
-                        🏗️ {t.label}
-                      </span>
-                    ) : null;
-                  })()}
-                  <div style={{ fontSize:10, color:"#E65100", fontWeight:600, marginBottom:4 }}>
-                    Klik om checklist te openen →
-                  </div>
-
-                  {/* startdatum — klikbaar om te bewerken */}
-                  {editDate === p.id ? (
-                    <div style={{ display:"flex", gap:4, alignItems:"center", marginBottom:6 }}>
-                      <input
-                        defaultValue={p.date}
-                        placeholder="dd-mm-yyyy"
-                        autoFocus
-                        onKeyDown={e => {
-                          if (e.key==="Enter") updateDate(p.id, e.target.value);
-                          if (e.key==="Escape") setEditDate(null);
-                        }}
-                        onBlur={e => updateDate(p.id, e.target.value)}
-                        style={{ fontSize:12, padding:"4px 8px", borderRadius:5,
-                          border:"2px solid #E65100", outline:"none", width:120 }}
-                      />
-                      <span style={{ fontSize:10, color:"#90A4AE" }}>Enter = opslaan</span>
-                    </div>
-                  ) : (
-                    <div onClick={()=>setEditDate(p.id)}
-                      style={{ display:"inline-flex", alignItems:"center", gap:5,
-                        background:"#FFF3E0", borderRadius:5, padding:"3px 9px",
-                        cursor:"pointer", marginBottom:6, border:"1px solid #FFCC80" }}>
-                      <span style={{ fontSize:11, color:"#E65100", fontWeight:700 }}>📅 {p.date}</span>
-                      <span style={{ fontSize:10, color:"#FFAB76" }}>✏️</span>
-                    </div>
-                  )}
-
-                  {/* duur & oplevering */}
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:p.leider?6:0 }}>
-                    {p.duur && (
-                      <span style={{ fontSize:10, background:"#E3F2FD", color:"#1565C0",
-                        borderRadius:4, padding:"2px 7px", fontWeight:600 }}>⏱ {p.duur}</span>
-                    )}
-                    {p.oplevering && (
-                      <span style={{ fontSize:10, background:"#FFEBEE", color:"#B71C1C",
-                        borderRadius:4, padding:"2px 7px", fontWeight:600 }}>🚚 {p.oplevering}</span>
-                    )}
-                  </div>
-
-                  {/* team */}
-                  {(p.leider || p.collega) && (
-                    <div style={{ fontSize:11, color:"#546E7A", borderTop:"1px solid #F0F2F5",
-                      paddingTop:6, marginTop:4 }}>
-                      👷 {p.leider}{p.collega ? ` & ${p.collega}` : ""}
-                    </div>
-                  )}
-                  {p.bedrag && (
-                    <div style={{ fontSize:12, fontWeight:800, color:"#2E7D32", marginTop:4 }}>
-                      💶 € {Number(p.bedrag).toLocaleString("nl-NL")}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      {monthsToShow.every(mi => byMonth[mi].length === 0) && (
-        <div style={{ textAlign:"center", color:"#90A4AE", fontSize:13, padding:40,
-          background:"#F5F7FA", borderRadius:10 }}>
-          <div style={{ fontSize:28, marginBottom:8 }}>📅</div>
-          Geen projecten gevonden voor {year}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── TIJDSCHEMA ────────────────────────────────────────────────────────
-const PROJ_COLORS = [
-  "#E65100","#1565C0","#6A1B9A","#2E7D32","#B71C1C",
-  "#0277BD","#558B2F","#4527A0","#AD1457","#00695C",
-  "#F57F17","#00838F","#6D4C41","#37474F","#C62828",
-  "#1B5E20","#4A148C","#BF360C","#006064","#37474F",
-];
-
-function Tijdschema({ projects, setProjects }) {
-  const today = new Date();
-
-  // View mode: day | week | month | year
-  const [viewMode, setViewMode] = useState("month");
-  // Anchor date — start of visible range
-  const [anchor, setAnchor] = useState(() => {
-    const d = new Date(today);
-    d.setDate(1);
-    return d;
-  });
-  const [editWeken,    setEditWeken]    = useState(null);
-  const [editNaam,     setEditNaam]     = useState(null);  // pid being name-edited
-  const [editLeider,   setEditLeider]   = useState(null);
-  const [editCollega,  setEditCollega]  = useState(null);
-  const [editTeamTs,   setEditTeamTs]   = useState(null);  // pid for team popup in tijdschema
-  const [filterType,   setFilterType]   = useState("");
-  const [filterLeider, setFilterLeider] = useState("");
-  const [search,       setSearch]       = useState("");
-  const [dragging,     setDragging]     = useState(null);  // { pid, startX, origDate }
-  const isDraggingBar  = useRef(false);
-  const timelineRef    = useRef(null);
-
-  // Scroll timeline to show today on load and viewMode change
-  useEffect(() => {
-    const el = timelineRef.current;
-    if (!el) return;
-    // Find today's position in cols
-    const todayMs = today.getTime();
-    let todayX = 0;
-    for (let i = 0; i < cols.length; i++) {
-      const { start, end } = cols[i];
-      if (todayMs >= start.getTime() && todayMs <= end.getTime()) {
-        const frac = (todayMs - start.getTime()) / (end.getTime() - start.getTime() + 1);
-        todayX = i * COL_W + frac * COL_W;
-        break;
-      }
-    }
-    // Center today on screen
-    const centerOffset = el.clientWidth / 2;
-    el.scrollLeft = Math.max(0, todayX - centerOffset);
-  }, [viewMode, anchor]);
-
-  // ── Date helpers ────────────────────────────────────────────────────
-  function parseD(str = "") {
-    if (!str) return null;
-    const m = str.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
-    if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
-    const s = str.match(/^(\d{1,2})[-./](\d{1,2})$/);
-    if (s) return new Date(2026, parseInt(s[2]) - 1, parseInt(s[1]));
-    return null;
-  }
-  function getEndDate(p) {
-    const start = parseD(p.date);
-    if (!start) return null;
-    const defaultWeken = p.type === "Dakopbouw" ? 8 : p.type === "Dakkapel" ? 1 : 4;
-    const weken = parseInt(p.weken) || defaultWeken;
-    const end = new Date(start);
-    end.setDate(start.getDate() + weken * 7);
-    return end;
-  }
-  function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
-  function startOfWeek(d) {
-    const r = new Date(d);
-    const day = r.getDay();
-    r.setDate(r.getDate() - ((day + 6) % 7));
-    return r;
-  }
-  function sameDay(a, b) { return a.toDateString() === b.toDateString(); }
-  function fmtDay(d) { return `${d.getDate()}-${d.getMonth()+1}`; }
-  function fmtFull(d) { return `${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}-${d.getFullYear()}`; }
-
-  // ── Build columns based on viewMode ─────────────────────────────────
-  function buildCols() {
-    if (viewMode === "day") {
-      // 60 days starting from anchor
-      return Array.from({length: 60}, (_, i) => {
-        const d = addDays(anchor, i);
-        return { label: fmtDay(d), subLabel: ["Zo","Ma","Di","Wo","Do","Vr","Za"][d.getDay()], start: d, end: d, isWeekend: d.getDay()===0||d.getDay()===6, isToday: sameDay(d, today) };
-      });
-    }
-    if (viewMode === "week") {
-      // 26 weeks starting from Monday of anchor week
-      const mon = startOfWeek(anchor);
-      return Array.from({length: 26}, (_, i) => {
-        const ws = addDays(mon, i * 7);
-        const we = addDays(ws, 6);
-        const wn = Math.ceil((((ws - new Date(ws.getFullYear(),0,1))/86400000)+1)/7);
-        return { label: `W${wn}`, subLabel: `${fmtDay(ws)}`, start: ws, end: we, isWeekend: false, isToday: today >= ws && today <= we };
-      });
-    }
-    if (viewMode === "month") {
-      // 24 months starting from anchor month
-      return Array.from({length: 24}, (_, i) => {
-        let m = anchor.getMonth() + i;
-        let y = anchor.getFullYear();
-        while (m > 11) { m -= 12; y++; }
-        const s = new Date(y, m, 1);
-        const e = new Date(y, m + 1, 0);
-        return { label: YEAR_MONTHS[m], subLabel: String(y), start: s, end: e, isWeekend: false, isToday: today.getMonth()===m && today.getFullYear()===y };
-      });
-    }
-    // year — show 4 years, each split into quarters
-    const startY = anchor.getFullYear();
-    const cols = [];
-    for (let y = startY; y < startY + 4; y++) {
-      for (let q = 0; q < 4; q++) {
-        const s = new Date(y, q * 3, 1);
-        const e = new Date(y, q * 3 + 3, 0);
-        cols.push({ label: `K${q+1}`, subLabel: String(y), start: s, end: e, isWeekend: false, isToday: today >= s && today <= e });
-      }
-    }
-    return cols;
-  }
-
-  const cols = buildCols();
-  const rangeStart = cols[0].start;
-  const rangeEnd   = cols[cols.length - 1].end;
-
-  // ── Navigate ─────────────────────────────────────────────────────────
-  function navigate(dir) {
-    const d = new Date(anchor);
-    const steps = { day: 30, week: 13, month: 12, year: 2 };
-    const n = steps[viewMode] * dir;
-    if (viewMode === "day")   d.setDate(d.getDate() + n);
-    if (viewMode === "week")  d.setDate(d.getDate() + n * 7);
-    if (viewMode === "month") d.setMonth(d.getMonth() + n);
-    if (viewMode === "year")  d.setFullYear(d.getFullYear() + n);
-    setAnchor(d);
-  }
-  function goToday() {
-    const d = new Date(today);
-    if (viewMode !== "day") d.setDate(1);
-    setAnchor(d);
-  }
-
-  // ── Filter projects ───────────────────────────────────────────────────
-  const visibleProjects = projects
-    .filter(p => !p.afgerond)
-    .filter(p => filterType ? p.type === filterType : true)
-    .filter(p => filterLeider ? (p.leider===filterLeider || p.collega===filterLeider) : true)
-    .filter(p => search ? p.name.toLowerCase().includes(search.toLowerCase()) : true)
-    .sort((a, b) => {
-      const sa = parseD(a.date), sb = parseD(b.date);
-      return (sa || new Date(9999,0,1)) - (sb || new Date(9999,0,1));
-    });
-
-  // ── Bar position for a project within cols ────────────────────────────
-  function getBar(p) {
-    const pStart = parseD(p.date);
-    const pEnd   = getEndDate(p);
-    if (!pStart || !pEnd) return null;
-    let startIdx = -1, endIdx = -1;
-    let startFrac = 0, endFrac = 1;
-    for (let i = 0; i < cols.length; i++) {
-      const { start, end } = cols[i];
-      const colMs = end - start + 86400000;
-      if (pStart <= end && pEnd >= start) {
-        if (startIdx === -1) {
-          startIdx = i;
-          startFrac = pStart > start ? (pStart - start) / colMs : 0;
-        }
-        endIdx = i;
-        endFrac = pEnd < end ? (pEnd - start + 86400000) / colMs : 1;
-      }
-    }
-    return startIdx === -1 ? null : { startIdx, endIdx, startFrac, endFrac };
-  }
-
-  async function saveWeken(pid, val) {
-    const w = parseInt(val);
-    if (!w || w < 1) { setEditWeken(null); return; }
-    const updated = projects.map(p => p.id===pid ? {...p, weken: String(w)} : p);
-    setProjects(updated);
-    await saveData("bouw_projects", updated);
-    setEditWeken(null);
-  }
-
-  async function saveNaam(pid, val) {
-    if (!val.trim()) { setEditNaam(null); return; }
-    const updated = projects.map(p => p.id===pid ? {...p, name: val.trim()} : p);
-    setProjects(updated);
-    await saveData("bouw_projects", updated);
-    setEditNaam(null);
-  }
-
-  async function saveLeider(pid, val) {
-    const updated = projects.map(p => p.id===pid ? {...p, leider: val} : p);
-    setProjects(updated);
-    await saveData("bouw_projects", updated);
-    setEditLeider(null);
-  }
-
-  async function saveCollega(pid, val) {
-    const updated = projects.map(p => p.id===pid ? {...p, collega: val} : p);
-    setProjects(updated);
-    await saveData("bouw_projects", updated);
-    setEditCollega(null);
-  }
-
-  // Drag to reschedule — returns new date string after dragging dx pixels
-  function computeNewDate(origDateStr, dx) {
-    const orig = parseD(origDateStr);
-    if (!orig) return origDateStr;
-    // How many ms per pixel based on viewMode and COL_W
-    const msDayMap = { day: 86400000, week: 7*86400000, month: 30*86400000, year: 91*86400000 };
-    const msPerPx = (msDayMap[viewMode] || 30*86400000) / COL_W;
-    const newMs = orig.getTime() + dx * msPerPx;
-    const newD = new Date(newMs);
-    return `${String(newD.getDate()).padStart(2,"0")}-${String(newD.getMonth()+1).padStart(2,"0")}-${newD.getFullYear()}`;
-  }
-
-  function startDrag(e, p) {
-    e.stopPropagation();
-    e.preventDefault();
-    isDraggingBar.current = true;
-    const origDate = p.date;
-    const startX = e.clientX;
-    let lastDate = origDate;
-
-    function onMove(ev) {
-      const dx = ev.clientX - startX;
-      const newDate = computeNewDate(origDate, dx);
-      if (newDate !== lastDate) {
-        lastDate = newDate;
-        setDragging({ pid: p.id, newDate });
-        // Live preview — update state temporarily
-        setProjects(prev => prev.map(pr => pr.id===p.id ? {...pr, date: newDate, _dragging: true} : pr));
-      }
-    }
-
-    async function onUp() {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      isDraggingBar.current = false;
-      setDragging(null);
-      // Save the final date
-      const finalDate = lastDate;
-      const updated = projects.map(pr => {
-        if (pr.id === p.id) {
-          const { _dragging, ...rest } = {...pr, date: finalDate};
-          return rest;
-        }
-        return pr;
-      });
-      setProjects(updated);
-      await saveData("bouw_projects", updated);
-    }
-
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  }
-
-  const COL_W = viewMode === "day" ? 38 : viewMode === "week" ? 52 : viewMode === "month" ? 58 : 56;
-  const ROW_H    = 52;  // row height — same on left and right (3 lines: naam + badges + leider/collega)
-  const HEADER_H = 22;  // each header row height
-  const NAME_W = 190;
-  const dayNames = ["Zo","Ma","Di","Wo","Do","Vr","Za"];
-
-  // group cols by year/month for header spanning
-  function buildHeaderGroups() {
-    if (viewMode === "day") {
-      const groups = {};
-      cols.forEach((c,i) => {
-        const key = `${c.start.getFullYear()}-${c.start.getMonth()}`;
-        if (!groups[key]) groups[key] = { label: `${YEAR_MONTHS[c.start.getMonth()]} ${c.start.getFullYear()}`, count: 0 };
-        groups[key].count++;
-      });
-      return Object.values(groups);
-    }
-    if (viewMode === "week") {
-      const groups = {};
-      cols.forEach(c => {
-        const key = `${c.start.getFullYear()}-${c.start.getMonth()}`;
-        if (!groups[key]) groups[key] = { label: `${YEAR_MONTHS[c.start.getMonth()]} ${c.start.getFullYear()}`, count: 0 };
-        groups[key].count++;
-      });
-      return Object.values(groups);
-    }
-    if (viewMode === "month") {
-      const groups = {};
-      cols.forEach(c => {
-        const key = c.subLabel;
-        if (!groups[key]) groups[key] = { label: c.subLabel, count: 0 };
-        groups[key].count++;
-      });
-      return Object.values(groups);
-    }
-    // year — group by year
-    const groups = {};
-    cols.forEach(c => {
-      const key = c.subLabel;
-      if (!groups[key]) groups[key] = { label: key, count: 0 };
-      groups[key].count++;
-    });
-    return Object.values(groups);
-  }
-
-  const headerGroups = buildHeaderGroups();
-  const totalWidth = NAME_W + cols.length * COL_W;
-
-  // ── Overlap detectie ─────────────────────────────────────────────────
-  const overlapSet = new Set();
-  for (let i = 0; i < visibleProjects.length; i++) {
-    for (let j = i+1; j < visibleProjects.length; j++) {
-      const a = visibleProjects[i], b = visibleProjects[j];
-      const as = parseD(a.date), ae = getEndDate(a);
-      const bs = parseD(b.date), be = getEndDate(b);
-      if (as && ae && bs && be && as < be && bs < ae) {
-        overlapSet.add(a.id);
-        overlapSet.add(b.id);
-      }
-    }
-  }
-
-  return (
-    <div style={{ fontFamily:"'Inter',sans-serif" }}>
-
-      {/* ── MAAND SNELKEUZE ── */}
-      <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:10 }}>
-        {[2026,2027].map(y => (
-          <div key={y} style={{ display:"flex", gap:3, alignItems:"center" }}>
-            <span style={{ fontSize:11, fontWeight:700, color:"#90A4AE", marginRight:2 }}>{y}</span>
-            {YEAR_MONTHS.map((m, mi) => {
-              const d = new Date(y, mi, 1);
-              const isActive = anchor.getMonth()===mi && anchor.getFullYear()===y && viewMode==="month";
-              const isNow = today.getMonth()===mi && today.getFullYear()===y;
-              const cnt = projects.filter(p=>{ const pd=parseD(p.date); return pd && pd.getMonth()===mi && pd.getFullYear()===y && !p.afgerond; }).length;
-              return (
-                <button key={m} onClick={()=>{ setViewMode("month"); setAnchor(new Date(y,mi,1)); }}
-                  style={{ padding:"3px 7px", borderRadius:5, border:"none",
-                    cursor:"pointer", fontSize:11, fontWeight:isActive?800:500,
-                    background: isActive?"#E65100": isNow?"#FFF3E0":"#F0F2F5",
-                    color: isActive?"#fff": isNow?"#E65100":"#546E7A",
-                    position:"relative", minWidth:28 }}>
-                  {m}
-                  {cnt>0 && <span style={{ position:"absolute", top:-4, right:-3,
-                    background: isActive?"#fff":"#E65100", color: isActive?"#E65100":"#fff",
-                    borderRadius:10, fontSize:8, fontWeight:900, padding:"0 3px",
-                    lineHeight:"14px", minWidth:14, textAlign:"center" }}>{cnt}</span>}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-
-      {/* ── CONTROLS ── */}
-      <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center", marginBottom:12 }}>
-
-        {/* View mode */}
-        <div style={{ display:"flex", background:"#F0F2F5", borderRadius:8, padding:3 }}>
-          {[["day","Dag"],["week","Week"],["month","Maand"],["year","Jaar"]].map(([k,l]) => (
-            <button key={k} onClick={()=>{ setViewMode(k); }}
-              style={{ background:viewMode===k?"#1C2B3A":"transparent",
-                color:viewMode===k?"#fff":"#546E7A",
-                border:"none", borderRadius:6, padding:"6px 14px",
-                cursor:"pointer", fontSize:12, fontWeight:viewMode===k?700:500,
-                transition:"all .15s" }}>
-              {l}
-            </button>
-          ))}
-        </div>
-
-        {/* Navigate */}
-        <button onClick={()=>navigate(-1)}
-          style={{ background:"#1C2B3A", color:"#fff", border:"none",
-            borderRadius:6, padding:"7px 14px", cursor:"pointer", fontWeight:700, fontSize:14 }}>◀</button>
-        <button onClick={goToday}
-          style={{ background:"#FFF3E0", color:"#E65100", border:"1px solid #FFCC80",
-            borderRadius:6, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700 }}>
-          Vandaag
-        </button>
-        <button onClick={()=>navigate(1)}
-          style={{ background:"#1C2B3A", color:"#fff", border:"none",
-            borderRadius:6, padding:"7px 14px", cursor:"pointer", fontWeight:700, fontSize:14 }}>▶</button>
-
-        {/* Range label */}
-        <span style={{ fontWeight:800, fontSize:14, color:"#1C2B3A", minWidth:180 }}>
-          {viewMode==="day"   && `${fmtDay(cols[0].start)} – ${fmtDay(cols[cols.length-1].end)}`}
-          {viewMode==="week"  && `${fmtDay(cols[0].start)} – ${fmtDay(cols[cols.length-1].end)}`}
-          {viewMode==="month" && `${YEAR_MONTHS[cols[0].start.getMonth()]} – ${YEAR_MONTHS[cols[cols.length-1].start.getMonth()]} ${cols[cols.length-1].start.getFullYear()}`}
-          {viewMode==="year"  && `${cols[0].subLabel} – ${cols[cols.length-1].subLabel}`}
-        </span>
-
-        {/* Filters */}
-        <input value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="🔍 Zoek project…"
-          style={{ padding:"6px 10px", borderRadius:6, border:"1px solid #CFD8DC",
-            fontSize:12, width:160, outline:"none" }} />
-        <select value={filterType} onChange={e=>setFilterType(e.target.value)}
-          style={{ padding:"6px 10px", borderRadius:6, border:"1px solid #CFD8DC",
-            fontSize:12, background:"#fff" }}>
-          <option value="">Alle types</option>
-          {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
-        </select>
-
-        <span style={{ fontSize:12, color:"#78909C", marginLeft:4 }}>
-          {visibleProjects.length} project{visibleProjects.length!==1?"en":""}
-          {overlapSet.size>0 && (
-            <span style={{ marginLeft:8, background:"#FFEBEE", color:"#B71C1C",
-              border:"1px solid #EF9A9A", borderRadius:4, padding:"1px 7px",
-              fontSize:11, fontWeight:700 }}>
-              ⚠️ {overlapSet.size/2|0} overlappingen
-            </span>
-          )}
-        </span>
-      </div>
-
-      {/* ── GANTT — split layout: sticky names + scrollable timeline ── */}
-      <div style={{ display:"flex", borderRadius:10, border:"1px solid #DDE3E9",
-        boxShadow:"0 2px 12px rgba(0,0,0,.07)", background:"#fff", overflow:"hidden" }}>
-
-        {/* LEFT: fixed name column */}
-        <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
-          borderRight:"3px solid #DDE3E9", zIndex:10, background:"#fff" }}>
-
-          {/* header top */}
-          <div style={{ background:"#0D1B2A", color:"#fff", padding:"4px 10px",
-            fontWeight:800, fontSize:11, height:HEADER_H, display:"flex", alignItems:"center",
-            boxSizing:"border-box" }}>
-            🏗️ Project / Team
-          </div>
-          {/* header bottom */}
-          <div style={{ background:"#1C2B3A", color:"#90A4AE", padding:"3px 10px",
-            fontSize:9, fontWeight:600, height:HEADER_H, display:"flex", alignItems:"center",
-            borderBottom:"2px solid #0D1B2A", boxSizing:"border-box" }}>
-            ✏️ klik naam / 👷 leider
-          </div>
-
-          {/* name rows */}
-          {visibleProjects.length === 0 ? (
-            <div style={{ padding:20, color:"#90A4AE", fontSize:12 }}>Geen projecten</div>
-          ) : visibleProjects.map((p, pi) => {
-            const color = PROJ_COLORS[pi % PROJ_COLORS.length];
-            const typeInfo = PROJECT_TYPES.find(t=>t.label===p.type);
-            const hasOverlap = overlapSet.has(p.id);
-            const defaultWeken = p.type==="Dakopbouw" ? 8 : p.type==="Dakkapel" ? 1 : 4;
-            const wekenNum = parseInt(p.weken)||defaultWeken;
-            return (
-              <div key={p.id}
-                style={{ display:"flex", alignItems:"center", height:ROW_H,
-                  borderBottom:"1px solid #F0F2F5", padding:"2px 6px", boxSizing:"border-box",
-                  background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
-                  borderLeft: hasOverlap?"3px solid #E53935":"3px solid "+color }}>
-                <div style={{ flex:1, overflow:"hidden" }}>
-                  {editNaam===p.id ? (
-                    <input autoFocus defaultValue={p.name}
-                      style={{ width:"100%", fontSize:10, fontWeight:700, padding:"1px 4px",
-                        borderRadius:3, border:"1px solid #E65100", outline:"none", boxSizing:"border-box" }}
-                      onKeyDown={e=>{ if(e.key==="Enter") saveNaam(p.id,e.target.value); if(e.key==="Escape") setEditNaam(null); }}
-                      onBlur={e=>saveNaam(p.id,e.target.value)} />
-                  ) : (
-                    <div onClick={()=>setEditNaam(p.id)} title="Klik om naam te wijzigen"
-                      style={{ fontWeight:700, fontSize:10, color:"#1C2B3A", cursor:"text",
-                        whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                      {p.name}
-                    </div>
-                  )}
-                  <div style={{ display:"flex", gap:3, alignItems:"center", flexWrap:"nowrap", marginTop:1 }}>
-                    {typeInfo && (
-                      <span style={{ fontSize:8, fontWeight:700, flexShrink:0,
-                        background:typeInfo.bg, color:typeInfo.text,
-                        border:`1px solid ${typeInfo.border}`,
-                        borderRadius:3, padding:"0px 4px" }}>
-                        {typeInfo.label}
-                      </span>
-                    )}
-                    {editWeken===p.id ? (
-                      <input defaultValue={wekenNum} autoFocus type="number" min="1" max="52"
-                        style={{ width:36, fontSize:9, padding:"1px 3px", borderRadius:3,
-                          border:"1px solid #E65100", outline:"none", textAlign:"center" }}
-                        onKeyDown={e=>{ if(e.key==="Enter") saveWeken(p.id,e.target.value); if(e.key==="Escape") setEditWeken(null); }}
-                        onBlur={e=>saveWeken(p.id,e.target.value)} />
-                    ) : (
-                      <span onClick={e=>{ e.stopPropagation(); setEditWeken(p.id); }}
-                        title="Klik om weken te wijzigen"
-                        style={{ fontSize:9, color:"#fff", flexShrink:0,
-                          background: p.type==="Dakopbouw"?"#6A1B9A": p.type==="Dakkapel"?"#2E7D32":color,
-                          borderRadius:3, padding:"1px 5px", cursor:"pointer", fontWeight:700 }}>
-                        {wekenNum}w
-                      </span>
-                    )}
-                    {hasOverlap && <span style={{ fontSize:9, color:"#B71C1C", fontWeight:800 }}>⚠️</span>}
-                    {editLeider===p.id ? (
-                      <select autoFocus value={p.leider||""}
-                        onChange={e=>saveLeider(p.id,e.target.value)}
-                        onBlur={()=>setEditLeider(null)}
-                        style={{ fontSize:9, borderRadius:3, border:"1px solid #90CAF9",
-                          padding:"1px 3px", background:"#fff", maxWidth:90 }}>
-                        <option value="">— geen —</option>
-                        {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
-                      </select>
-                    ) : (
-                      <span onClick={e=>{ e.stopPropagation(); setEditLeider(p.id); }}
-                        title="Klik om projectleider te wijzigen"
-                        style={{ fontSize:9, color: p.leider?"#1565C0":"#BDBDBD",
-                          cursor:"pointer", whiteSpace:"nowrap", overflow:"hidden",
-                          textOverflow:"ellipsis", maxWidth:80, fontWeight: p.leider?600:400 }}>
-                        {p.leider ? `👷 ${p.leider}` : "+ leider"}
-                      </span>
-                    )}
-                    {/* collega */}
-                    {editCollega===p.id ? (
-                      <select autoFocus value={p.collega||""}
-                        onChange={e=>saveCollega(p.id,e.target.value)}
-                        onBlur={()=>setEditCollega(null)}
-                        style={{ fontSize:9, borderRadius:3, border:"1px solid #A5D6A7",
-                          padding:"1px 3px", background:"#fff", maxWidth:90 }}>
-                        <option value="">— geen —</option>
-                        {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
-                      </select>
-                    ) : (
-                      <span onClick={e=>{ e.stopPropagation(); setEditCollega(p.id); }}
-                        title="Klik om collega te wijzigen"
-                        style={{ fontSize:9, color: p.collega?"#2E7D32":"#BDBDBD",
-                          cursor:"pointer", whiteSpace:"nowrap", overflow:"hidden",
-                          textOverflow:"ellipsis", maxWidth:80, fontWeight: p.collega?600:400 }}>
-                        {p.collega ? `👷 ${p.collega}` : "+ collega"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* RIGHT: scrollable timeline — drag to scroll */}
-        <div ref={timelineRef}
-          style={{ flex:1, overflowX:"scroll", overflowY:"hidden",
-            cursor:"grab", userSelect:"none", WebkitOverflowScrolling:"touch" }}
-          onMouseDown={e=>{
-            if (isDraggingBar.current) return;
-            if (e.target.closest && e.target.closest("[data-gantt-bar]")) return;
-            const el = timelineRef.current;
-            if (!el) return;
-            const startX = e.pageX;
-            const startScroll = el.scrollLeft;
-            el.style.cursor = "grabbing";
-            el.style.userSelect = "none";
-            function mv(ev) {
-              if (isDraggingBar.current) return;
-              const dx = ev.pageX - startX;
-              el.scrollLeft = startScroll - dx;
-            }
-            function up() {
-              el.style.cursor = "grab";
-              el.style.userSelect = "none";
-              document.removeEventListener("mousemove", mv);
-              document.removeEventListener("mouseup", up);
-            }
-            document.addEventListener("mousemove", mv);
-            document.addEventListener("mouseup", up);
-            e.preventDefault();
-          }}>
-
-          <div style={{ width: cols.length * COL_W, minWidth: cols.length * COL_W }}>
-
-            {/* header row 1 — month spans */}
-            <div style={{ display:"flex", background:"#0D1B2A", color:"#fff", height:HEADER_H }}>
-              {headerGroups.map((g,i) => (
-                <div key={i} style={{ width:g.count*COL_W, flexShrink:0, textAlign:"center",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  fontWeight:800, fontSize:11, borderLeft: i>0?"2px solid #1C2B3A":"none" }}>
-                  {g.label}
-                </div>
-              ))}
-            </div>
-
-            {/* header row 2 — individual cols */}
-            <div style={{ display:"flex", background:"#1C2B3A", color:"#fff",
-              borderBottom:"2px solid #0D1B2A", height:HEADER_H }}>
-              {cols.map((c,i) => (
-                <div key={i} style={{ width:COL_W, minWidth:COL_W, flexShrink:0,
-                  textAlign:"center", padding:"2px 1px",
-                  background: c.isToday?"#E65100":(c.isWeekend?"#263547":"#1C2B3A"),
-                  borderLeft: i===0?"none":"1px solid #263547",
-                  fontSize:10, fontWeight:c.isToday?800:500,
-                  color: c.isToday?"#fff":(c.isWeekend?"#90A4AE":"#fff"),
-                  display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
-                  <div style={{ fontWeight:700, lineHeight:1.1 }}>{c.label}</div>
-                  {c.subLabel && viewMode!=="month" && viewMode!=="year" &&
-                    <div style={{ fontSize:8, opacity:.7 }}>{c.subLabel}</div>}
-                </div>
-              ))}
-            </div>
-
-            {/* project bar rows */}
-            {visibleProjects.length === 0 ? (
-              <div style={{ padding:40, textAlign:"center", color:"#90A4AE", fontSize:13 }}>
-                Geen projecten zichtbaar in deze periode
-              </div>
-            ) : visibleProjects.map((p, pi) => {
-            const bar   = getBar(p);
-            const color = PROJ_COLORS[pi % PROJ_COLORS.length];
-            const typeInfo = PROJECT_TYPES.find(t=>t.label===p.type);
-            const hasOverlap = overlapSet.has(p.id);
-            const defaultWeken = p.type === "Dakopbouw" ? 8 : p.type === "Dakkapel" ? 1 : 4;
-            const wekenNum = parseInt(p.weken) || defaultWeken;
-
-            return (
-              <div key={p.id}
-                style={{ position:"relative", height:ROW_H, display:"flex", alignItems:"center",
-                  background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
-                  borderBottom:"1px solid #F0F2F5", boxSizing:"border-box" }}
-                onMouseEnter={e=>e.currentTarget.style.background=hasOverlap?"#FFEBEE":"#EBF3FF"}
-                onMouseLeave={e=>e.currentTarget.style.background=hasOverlap?"#FFF5F5":pi%2===0?"#FAFBFC":"#fff"}>
-
-                {/* column backgrounds */}
-                {cols.map((c,ci) => (
-                  <div key={ci} style={{ width:COL_W, minWidth:COL_W, flexShrink:0, height:"100%",
-                    background: c.isToday?"rgba(230,81,0,.07)":(c.isWeekend?"rgba(0,0,0,.02)":"transparent"),
-                    borderLeft: c.isToday?"2px solid rgba(230,81,0,.5)":"1px solid #F0F2F5",
-                    position:"absolute", left:ci*COL_W, top:0 }}/>
-                ))}
-                {/* vandaag lijn */}
-                {(() => {
-                  const todayMs = today.getTime();
-                  for (let ci=0; ci<cols.length; ci++) {
-                    const { start, end } = cols[ci];
-                    if (todayMs >= start.getTime() && todayMs <= end.getTime()) {
-                      const frac = (todayMs - start.getTime()) / (end.getTime() - start.getTime());
-                      const x = ci * COL_W + frac * COL_W;
-                      return <div style={{ position:"absolute", left:x, top:0, bottom:0,
-                        width:2, background:"#E65100", zIndex:3, pointerEvents:"none",
-                        boxShadow:"0 0 4px #E65100" }} />;
-                    }
-                  }
-                  return null;
-                })()}
-
-                {/* gantt bar */}
-                {bar && (() => {
-                  const left = bar.startIdx*COL_W + bar.startFrac*COL_W;
-                  const right = (cols.length - bar.endIdx - 1)*COL_W + (1-bar.endFrac)*COL_W;
-                  const width = cols.length*COL_W - left - right;
-                  const isDragging = dragging?.pid === p.id;
-                  return (
-                    <div data-gantt-bar="1"
-                      onMouseDown={e=>{ e.stopPropagation(); startDrag(e, p); }}
-                      style={{ position:"absolute", left, width:Math.max(width,6),
-                        top:"50%", transform:"translateY(-50%)",
-                        height:ROW_H, borderRadius:4,
-                        background:`linear-gradient(90deg, ${color}ee, ${color}bb)`,
-                        boxShadow: isDragging?`0 4px 16px ${color}99`:`0 2px 6px ${color}44`,
-                        display:"flex", alignItems:"center", overflow:"visible",
-                        cursor:"grab", zIndex:2,
-                        opacity: isDragging?0.9:1,
-                        outline: isDragging?`2px solid ${color}`:"none" }}
-                      title={`${p.name} · ${p.date} · ${wekenNum}w
-↔ Sleep om datum te verschuiven`}>
-                      {isDragging && (
-                        <span style={{ position:"absolute", top:-20, left:0, zIndex:20,
-                          background:"#1C2B3A", color:"#fff", fontSize:9, fontWeight:700,
-                          padding:"2px 7px", borderRadius:4, whiteSpace:"nowrap",
-                          boxShadow:"0 2px 8px rgba(0,0,0,.3)" }}>
-                          📅 {p.date}
-                        </span>
-                      )}
-                      {width > 40 && (
-                        <span style={{ fontSize:9, color:"#fff", fontWeight:700,
-                          paddingLeft:7, whiteSpace:"nowrap", overflow:"hidden",
-                          textOverflow:"ellipsis", maxWidth:width-14, pointerEvents:"none" }}>
-                          {p.name.split(" ").slice(0,2).join(" ")}
-                        </span>
-                      )}
-                      <div style={{ position:"absolute", left:0, top:0, bottom:0, width:6,
-                        background:"rgba(255,255,255,.45)", borderRadius:"4px 0 0 4px" }}/>
-                      <div style={{ position:"absolute", right:0, top:0, bottom:0, width:6,
-                        background:"rgba(0,0,0,.15)", borderRadius:"0 4px 4px 0" }}/>
-                    </div>
-                  );
-                })()}
-              </div>
-            );
-          })}
-          </div>
-        </div>
-      </div>
-
-      {/* ── LEGEND ── */}
-      <div style={{ marginTop:12, display:"flex", gap:16, flexWrap:"wrap",
-        fontSize:11, color:"#78909C", alignItems:"center" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-          <span>↔</span> Sleep om te scrollen
-        </div>
-        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-          <div style={{ width:16, height:12, background:"rgba(230,81,0,.15)",
-            border:"2px solid rgba(230,81,0,.4)", borderRadius:2 }}/> Vandaag
-        </div>
-        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-          <div style={{ width:16, height:12, background:"#FFF5F5",
-            border:"1px solid #FFCDD2", borderRadius:2, borderLeft:"3px solid #E53935" }}/> Overlapping
-        </div>
-        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-          <span style={{ background:"#6A1B9A", color:"#fff", borderRadius:3,
-            padding:"1px 5px", fontSize:9, fontWeight:700 }}>8w</span>
-          Dakopbouw (8 weken)
-        </div>
-        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-          <span style={{ background:"#E65100", color:"#fff", borderRadius:3,
-            padding:"1px 5px", fontSize:9, fontWeight:700 }}>4w</span>
-          Klik badge om weken aan te passen
-        </div>
-      </div>
-        {PROJECT_TYPES.map(t => (
-          <div key={t.label} style={{ display:"flex", alignItems:"center", gap:4 }}>
-            <div style={{ width:12, height:12, background:t.bg, border:`1px solid ${t.border}`,
-              borderRadius:2 }}/>
-            <span style={{ color:t.text, fontWeight:600 }}>{t.label}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
