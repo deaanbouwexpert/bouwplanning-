@@ -2347,6 +2347,7 @@ function Tijdschema({ projects, setProjects }) {
   const [editLeider,   setEditLeider]   = useState(null);  // pid being leider-edited
   const [editCollega,  setEditCollega]  = useState(null);  // pid being collega-edited
   const [filterType,   setFilterType]   = useState("");
+  const [filterLeider, setFilterLeider] = useState("");
   const [search,       setSearch]       = useState("");
   const [dragging,     setDragging]     = useState(null);  // { pid, startX, origDate }
   const isDraggingBar  = useRef(false);
@@ -2469,13 +2470,8 @@ function Tijdschema({ projects, setProjects }) {
   const visibleProjects = projects
     .filter(p => !p.afgerond)
     .filter(p => filterType ? p.type === filterType : true)
+    .filter(p => filterLeider ? (p.leider===filterLeider || p.collega===filterLeider) : true)
     .filter(p => search ? p.name.toLowerCase().includes(search.toLowerCase()) : true)
-    .filter(p => {
-      const s = parseD(p.date);
-      const e = getEndDate(p);
-      if (!s || !e) return false;
-      return s <= rangeEnd && e >= rangeStart;
-    })
     .sort((a, b) => {
       const sa = parseD(a.date), sb = parseD(b.date);
       return (sa || new Date(9999,0,1)) - (sb || new Date(9999,0,1));
@@ -2729,6 +2725,15 @@ function Tijdschema({ projects, setProjects }) {
             fontSize:12, background:"#fff" }}>
           <option value="">Alle types</option>
           {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
+        </select>
+        <select value={filterLeider} onChange={e=>setFilterLeider(e.target.value)}
+          style={{ padding:"6px 10px", borderRadius:6,
+            border: filterLeider?"1px solid #1565C0":"1px solid #90CAF9",
+            fontSize:12, background:"#fff",
+            color: filterLeider?"#1565C0":"#546E7A",
+            fontWeight: filterLeider?700:400 }}>
+          <option value="">👷 Alle medewerkers</option>
+          {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
         </select>
 
         <span style={{ fontSize:12, color:"#78909C", marginLeft:4 }}>
@@ -3344,6 +3349,7 @@ function Tijdschema({ projects, setProjects }) {
   const [editLeider,   setEditLeider]   = useState(null);  // pid being leider-edited
   const [editCollega,  setEditCollega]  = useState(null);  // pid being collega-edited
   const [filterType,   setFilterType]   = useState("");
+  const [filterLeider, setFilterLeider] = useState("");
   const [search,       setSearch]       = useState("");
   const [dragging,     setDragging]     = useState(null);  // { pid, startX, origDate }
   const isDraggingBar  = useRef(false);
@@ -3466,13 +3472,8 @@ function Tijdschema({ projects, setProjects }) {
   const visibleProjects = projects
     .filter(p => !p.afgerond)
     .filter(p => filterType ? p.type === filterType : true)
+    .filter(p => filterLeider ? (p.leider===filterLeider || p.collega===filterLeider) : true)
     .filter(p => search ? p.name.toLowerCase().includes(search.toLowerCase()) : true)
-    .filter(p => {
-      const s = parseD(p.date);
-      const e = getEndDate(p);
-      if (!s || !e) return false;
-      return s <= rangeEnd && e >= rangeStart;
-    })
     .sort((a, b) => {
       const sa = parseD(a.date), sb = parseD(b.date);
       return (sa || new Date(9999,0,1)) - (sb || new Date(9999,0,1));
