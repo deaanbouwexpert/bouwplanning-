@@ -2728,9 +2728,8 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
           })}
         </div>
       </div>
+      </div>
 
-      </div>
-      </div>
       {/* Legenda */}
       <div style={{marginTop:10,display:"flex",gap:14,flexWrap:"wrap",fontSize:11,color:"#78909C",alignItems:"center"}}>
         <span>← Sleep tijdlijn</span>
