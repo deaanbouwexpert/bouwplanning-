@@ -2348,7 +2348,8 @@ function Tijdschema({ projects, setProjects }) {
   const [filterType,   setFilterType]   = useState("");
   const [search,       setSearch]       = useState("");
   const [dragging,     setDragging]     = useState(null);  // { pid, startX, origDate }
-  const isDraggingBar = useRef(false);
+  const isDraggingBar  = useRef(false);
+  const timelineRef    = useRef(null);
 
   // ── Date helpers ────────────────────────────────────────────────────
   function parseD(str = "") {
@@ -2559,7 +2560,8 @@ function Tijdschema({ projects, setProjects }) {
   }
 
   const COL_W = viewMode === "day" ? 38 : viewMode === "week" ? 52 : viewMode === "month" ? 58 : 56;
-  const ROW_H = 26;
+  const ROW_H    = 32;  // row height — same on left and right
+  const HEADER_H = 22;  // each header row height
   const NAME_W = 190;
   const dayNames = ["Zo","Ma","Di","Wo","Do","Vr","Za"];
 
@@ -2723,13 +2725,14 @@ function Tijdschema({ projects, setProjects }) {
 
           {/* header top */}
           <div style={{ background:"#0D1B2A", color:"#fff", padding:"4px 10px",
-            fontWeight:800, fontSize:11, height:22, display:"flex", alignItems:"center" }}>
+            fontWeight:800, fontSize:11, height:HEADER_H, display:"flex", alignItems:"center",
+            boxSizing:"border-box" }}>
             🏗️ Project / Team
           </div>
           {/* header bottom */}
           <div style={{ background:"#1C2B3A", color:"#90A4AE", padding:"3px 10px",
-            fontSize:9, fontWeight:600, height:22, display:"flex", alignItems:"center",
-            borderBottom:"2px solid #0D1B2A" }}>
+            fontSize:9, fontWeight:600, height:HEADER_H, display:"flex", alignItems:"center",
+            borderBottom:"2px solid #0D1B2A", boxSizing:"border-box" }}>
             ✏️ klik naam / 👷 leider
           </div>
 
@@ -2744,8 +2747,8 @@ function Tijdschema({ projects, setProjects }) {
             const wekenNum = parseInt(p.weken)||defaultWeken;
             return (
               <div key={p.id}
-                style={{ display:"flex", alignItems:"center", height:ROW_H+6,
-                  borderBottom:"1px solid #F0F2F5", padding:"2px 6px",
+                style={{ display:"flex", alignItems:"center", height:ROW_H,
+                  borderBottom:"1px solid #F0F2F5", padding:"2px 6px", boxSizing:"border-box",
                   background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
                   borderLeft: hasOverlap?"3px solid #E53935":"3px solid "+color }}>
                 <div style={{ flex:1, overflow:"hidden" }}>
@@ -2813,23 +2816,31 @@ function Tijdschema({ projects, setProjects }) {
         </div>
 
         {/* RIGHT: scrollable timeline */}
-        <div style={{ flex:1, overflowX:"auto", cursor:"grab", userSelect:"none" }}
-          ref={el => { if(el && !el._dragSetup) { el._dragSetup=true;
-            el.addEventListener("mousedown", function(e) {
-              if(isDraggingBar.current) return;
-              if(e.target.closest && e.target.closest("[data-gantt-bar]")) return;
-              let sx = e.pageX + el.scrollLeft;
-              function mv(ev) { if(isDraggingBar.current) return; el.scrollLeft = sx - ev.pageX; el.style.cursor="grabbing"; }
-              function up() { document.removeEventListener("mousemove",mv); document.removeEventListener("mouseup",up); el.style.cursor="grab"; }
-              document.addEventListener("mousemove", mv);
-              document.addEventListener("mouseup", up);
-            });
-          }}}>
+        <div ref={timelineRef}
+          style={{ flex:1, overflowX:"auto", overflowY:"hidden", cursor:"grab", userSelect:"none" }}
+          onMouseDown={e=>{
+            if (isDraggingBar.current) return;
+            if (e.target.closest && e.target.closest("[data-gantt-bar]")) return;
+            const el = timelineRef.current;
+            let sx = e.pageX + el.scrollLeft;
+            function mv(ev) {
+              if (isDraggingBar.current) return;
+              el.scrollLeft = sx - ev.pageX;
+              el.style.cursor = "grabbing";
+            }
+            function up() {
+              document.removeEventListener("mousemove", mv);
+              document.removeEventListener("mouseup", up);
+              el.style.cursor = "grab";
+            }
+            document.addEventListener("mousemove", mv);
+            document.addEventListener("mouseup", up);
+          }}>
 
           <div style={{ width: cols.length * COL_W, minWidth: cols.length * COL_W }}>
 
             {/* header row 1 — month spans */}
-            <div style={{ display:"flex", background:"#0D1B2A", color:"#fff", height:22 }}>
+            <div style={{ display:"flex", background:"#0D1B2A", color:"#fff", height:HEADER_H }}>
               {headerGroups.map((g,i) => (
                 <div key={i} style={{ width:g.count*COL_W, flexShrink:0, textAlign:"center",
                   display:"flex", alignItems:"center", justifyContent:"center",
@@ -2841,7 +2852,7 @@ function Tijdschema({ projects, setProjects }) {
 
             {/* header row 2 — individual cols */}
             <div style={{ display:"flex", background:"#1C2B3A", color:"#fff",
-              borderBottom:"2px solid #0D1B2A", height:22 }}>
+              borderBottom:"2px solid #0D1B2A", height:HEADER_H }}>
               {cols.map((c,i) => (
                 <div key={i} style={{ width:COL_W, minWidth:COL_W, flexShrink:0,
                   textAlign:"center", padding:"2px 1px",
@@ -2872,9 +2883,9 @@ function Tijdschema({ projects, setProjects }) {
 
             return (
               <div key={p.id}
-                style={{ position:"relative", height:ROW_H+6, display:"flex", alignItems:"center",
+                style={{ position:"relative", height:ROW_H, display:"flex", alignItems:"center",
                   background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
-                  borderBottom:"1px solid #F0F2F5" }}
+                  borderBottom:"1px solid #F0F2F5", boxSizing:"border-box" }}
                 onMouseEnter={e=>e.currentTarget.style.background=hasOverlap?"#FFEBEE":"#EBF3FF"}
                 onMouseLeave={e=>e.currentTarget.style.background=hasOverlap?"#FFF5F5":pi%2===0?"#FAFBFC":"#fff"}>
 
