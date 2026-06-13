@@ -127,7 +127,6 @@ const DEFAULT_PROJECTS = [
   { id:67, name:"Wijnberg 22 Zoetermeer",            date:"28-09-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", bedrag:"98000", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(19).fill("") },
   { id:68, name:"Wieldraaier 4 Delfgauw",            date:"26-05-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", bedrag:"54000", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:Array(19).fill("") },
   // ── WHITEBOARD MEI-JUNI 2026 (bestaande projecten) ──
-  { id:75, name:"Serjanbeek 100", date:"4-05-2026", duur:"", weken:"4", leider:"Rob", collega:"", oplevering:"", einddatum:"", bedrag:"48000", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:["Geleverd", "Geleverd", "Meergagrijs", "Geleverd", "Besteld", "", "Besteld", "Gereed", "", "Aangevraagd", "Gereed", "×", "Plannen!", "", "Plannen!", "Geleverd", "×", "×"] },
   { id:76, name:"Bizet 22-06", date:"22-06-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", bedrag:"124000", afgerond:false, typeLabel:"Dakopbouw", type:"Dakopbouw", statuses:["Besteld", "Geleverd", "Geleverd", "Aangevraagd", "×", "×", "×", "×", "Aangevraagd", "", "Plannen!", "Plannen!", "", "Plannen!", "Plannen!", "Plannen!", "", "Aangevraagd"] },
   { id:77, name:"Lingestraat 15J", date:"15-06-2026", duur:"", weken:"8", leider:"", collega:"", oplevering:"", einddatum:"", bedrag:"48000", afgerond:false, typeLabel:"Dak Uitbouw", type:"Dakopbouw", statuses:["", "Geleverd", "Besteld", "Herje Bruik", "×", "×", "", "×", "Doet klant", "×", "26-6", "19-6", "Week29", "15 Jun", "15 Jun", "Eben Stetzer", "×", ""] },
   { id:78, name:"Marterstraat 23-06", date:"23-06-2026", duur:"", weken:"4", leider:"", collega:"", oplevering:"", einddatum:"", bedrag:"55000", afgerond:false, typeLabel:"Aanbouw", type:"Aanbouw", statuses:["×", "×", "Zandsteen", "Aangevraagd", "Plannen!", "×", "Besteld", "Plannen!", "Doet klant", "Aangevraagd", "Plannen!", "×", "×", "×", "Plannen!", "×", "Plannen!", "Plannen!"] },
@@ -2956,9 +2955,12 @@ function Omzet({ projects }) {
 
 function Logboek({ logs, onClear }) {
   const TYPE_META = {
-    "status":    { icon:"✏️", color:"#1565C0", bg:"#E3F2FD", label:"Status gewijzigd" },
-    "project_add":    { icon:"➕", color:"#2E7D32", bg:"#E8F5E9", label:"Project toegevoegd" },
-    "project_remove": { icon:"🗑️", color:"#B71C1C", bg:"#FFEBEE", label:"Project verwijderd" },
+    "status":           { icon:"✏️", color:"#1565C0", bg:"#E3F2FD", label:"Status gewijzigd" },
+    "team_update":      { icon:"👷", color:"#6A1B9A", bg:"#F3E5F5", label:"Team/project gewijzigd" },
+    "project_add":      { icon:"➕", color:"#2E7D32", bg:"#E8F5E9", label:"Project toegevoegd" },
+    "project_remove":   { icon:"🗑️", color:"#B71C1C", bg:"#FFEBEE", label:"Project verwijderd" },
+    "project_afgerond": { icon:"✅", color:"#2E7D32", bg:"#E8F5E9", label:"Afgerond" },
+    "project_heropen":  { icon:"🔄", color:"#E65100", bg:"#FFF3E0", label:"Heropend" },
   };
 
   return (
@@ -3006,6 +3008,12 @@ function Logboek({ logs, onClear }) {
                     <span style={{ fontWeight:700, fontSize:13, color:"#1C2B3A" }}>{log.project}</span>
                     <span style={{ background:meta.bg, color:meta.color, borderRadius:4,
                       padding:"1px 7px", fontSize:10, fontWeight:700 }}>{meta.label}</span>
+                    {log.gebruiker && (
+                      <span style={{ background:"#FFF3E0", color:"#E65100", borderRadius:4,
+                        padding:"1px 7px", fontSize:10, fontWeight:700 }}>
+                        👤 {log.gebruiker}
+                      </span>
+                    )}
                   </div>
                   {log.type === "status" && (
                     <div style={{ fontSize:12, color:"#546E7A", marginTop:3 }}>
@@ -3443,6 +3451,18 @@ export default function App() {
     setProjects(updated);
     try { localStorage.setItem("bouw_projects_backup", JSON.stringify(updated)); } catch {}
     await saveData("bouw_projects", updated);
+    const proj = projects.find(p => p.id===pid);
+    if (proj) {
+      const changes = [];
+      if (fields.name && fields.name !== proj.name) changes.push(`Naam: ${proj.name} → ${fields.name}`);
+      if (fields.leider !== undefined && fields.leider !== proj.leider) changes.push(`Leider: ${proj.leider||"—"} → ${fields.leider||"—"}`);
+      if (fields.collega !== undefined && fields.collega !== proj.collega) changes.push(`Collega: ${proj.collega||"—"} → ${fields.collega||"—"}`);
+      if (fields.date && fields.date !== proj.date) changes.push(`Startdatum: ${proj.date} → ${fields.date}`);
+      if (fields.weken && fields.weken !== proj.weken) changes.push(`Weken: ${proj.weken||"—"} → ${fields.weken}`);
+      if (changes.length > 0) {
+        await addLog({ type:"team_update", project: proj.name, kolom: changes.join(", ") });
+      }
+    }
   }
 
   function nowStr() {
@@ -3451,7 +3471,7 @@ export default function App() {
   }
 
   async function addLog(entry) {
-    const updated = [...logs, { ...entry, tijd: nowStr() }];
+    const updated = [...logs, { ...entry, tijd: nowStr(), gebruiker: currentUser?.name || "Onbekend" }];
     setLogs(updated);
     await saveData("bouw_logs", updated);
   }
