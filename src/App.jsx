@@ -2330,7 +2330,7 @@ const PROJ_COLORS = [
   "#6D4C41","#37474F","#BF360C","#1B5E20","#4A148C","#006064",
 ];
 
-function Tijdschema({ projects, setProjects }) {
+function Tijdschema({ projects, setProjects, updateTeam }) {
   const today      = new Date();
   const [viewMode, setViewMode] = useState("month");
   const [anchor,   setAnchor]   = useState(() => { const d=new Date(today); d.setDate(1); return d; });
@@ -2339,9 +2339,7 @@ function Tijdschema({ projects, setProjects }) {
   const [filterLeider,  setFilterLeider]  = useState("");
   const [editWeken,  setEditWeken]  = useState(null);
   const [editNaam,   setEditNaam]   = useState(null);
-  const [teamPid,    setTeamPid]    = useState(null);
-  const [teamLeider, setTeamLeider] = useState("");
-  const [teamCollega,setTeamCollega]= useState("");
+  const [editTeamTs, setEditTeamTs] = useState(null); // pid for TeamEditInline popup
   const scrollRef = useRef(null);
   const dragRef   = useRef({ active:false });
 
@@ -2447,10 +2445,7 @@ function Tijdschema({ projects, setProjects }) {
     const u=projects.map(p=>p.id===pid?{...p,name:val.trim()}:p);
     setProjects(u); await saveData("bouw_projects",u); setEditNaam(null);
   }
-  async function saveTeam(pid){
-    const u=projects.map(p=>p.id===pid?{...p,leider:teamLeider,collega:teamCollega}:p);
-    setProjects(u); await saveData("bouw_projects",u); setTeamPid(null);
-  }
+
 
   // Drag bar to reschedule
   function startDrag(e,p){
@@ -2686,7 +2681,7 @@ function Tijdschema({ projects, setProjects }) {
                     {ov&&<span style={{fontSize:9,color:"#B71C1C"}}>⚠️</span>}
 
                     {/* 👷 Team knop */}
-                    <button onClick={e=>{e.stopPropagation();setTeamPid(p.id);setTeamLeider(p.leider||"");setTeamCollega(p.collega||"");}}
+                    <button onClick={e=>{e.stopPropagation();setEditTeamTs(p.id);}}
                       style={{fontSize:9,cursor:"pointer",flexShrink:0,border:"none",
                         background:(p.leider||p.collega)?"#E3F2FD":"#F5F5F5",
                         color:(p.leider||p.collega)?"#1565C0":"#90A4AE",
@@ -2750,56 +2745,19 @@ function Tijdschema({ projects, setProjects }) {
         <span style={{background:"#E3F2FD",color:"#1565C0",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:600}}>👷 Team</span> <span>klik = personeel wijzigen</span>
       </div>
 
-      {/* Team popup */}
-      {teamPid && ReactDOM.createPortal(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:9998,
-          display:"flex",alignItems:"center",justifyContent:"center"}}
-          onMouseDown={()=>setTeamPid(null)}>
-          <div style={{background:"#fff",borderRadius:12,padding:24,width:300,
-            boxShadow:"0 8px 40px rgba(0,0,0,.3)",border:"2px solid #90CAF9"}}
+      {/* TeamEditInline popup — zelfde als in Checklist */}
+      {editTeamTs && typeof document !== "undefined" && ReactDOM.createPortal(
+        <div style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(0,0,0,.35)"}}
+          onMouseDown={()=>setEditTeamTs(null)}>
+          <div style={{position:"fixed",top:"50%",left:"50%",
+            transform:"translate(-50%,-50%)",zIndex:9999,maxHeight:"90vh",
+            overflowY:"auto",borderRadius:10}}
             onMouseDown={e=>e.stopPropagation()}>
-            <div style={{fontWeight:800,fontSize:14,color:"#1C2B3A",marginBottom:16}}>
-              👷 Team indeling
-            </div>
-            <div style={{fontSize:12,color:"#546E7A",marginBottom:16,fontWeight:500}}>
-              {projects.find(p=>p.id===teamPid)?.name}
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              <div>
-                <label style={{fontSize:11,fontWeight:600,color:"#1565C0",display:"block",marginBottom:4}}>
-                  👷 Projectleider
-                </label>
-                <select value={teamLeider} onChange={e=>setTeamLeider(e.target.value)}
-                  style={{width:"100%",fontSize:13,padding:"8px 10px",borderRadius:6,
-                    border:"2px solid #90CAF9",background:"#fff",outline:"none"}}>
-                  <option value="">— Geen —</option>
-                  {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{fontSize:11,fontWeight:600,color:"#2E7D32",display:"block",marginBottom:4}}>
-                  👷 Collega
-                </label>
-                <select value={teamCollega} onChange={e=>setTeamCollega(e.target.value)}
-                  style={{width:"100%",fontSize:13,padding:"8px 10px",borderRadius:6,
-                    border:"2px solid #A5D6A7",background:"#fff",outline:"none"}}>
-                  <option value="">— Geen —</option>
-                  {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:8,marginTop:20}}>
-              <button onClick={()=>saveTeam(teamPid)}
-                style={{flex:1,padding:"10px",borderRadius:7,border:"none",
-                  background:"#E65100",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer"}}>
-                ✓ Opslaan
-              </button>
-              <button onClick={()=>setTeamPid(null)}
-                style={{padding:"10px 16px",borderRadius:7,border:"1px solid #DDE3E9",
-                  background:"#F5F7FA",color:"#546E7A",fontWeight:600,fontSize:13,cursor:"pointer"}}>
-                Annuleer
-              </button>
-            </div>
+            <TeamEditInline
+              p={projects.find(p=>p.id===editTeamTs)||{}}
+              onSave={async(fields)=>{ await updateTeam(editTeamTs,fields); }}
+              onClose={()=>setEditTeamTs(null)}
+            />
           </div>
         </div>,
         document.body
@@ -3480,6 +3438,13 @@ export default function App() {
     setHighlightProject(pid);
   }
 
+  async function updateTeamApp(pid, fields) {
+    const updated = projects.map(p => p.id===pid ? { ...p, ...fields } : p);
+    setProjects(updated);
+    try { localStorage.setItem("bouw_projects_backup", JSON.stringify(updated)); } catch {}
+    await saveData("bouw_projects", updated);
+  }
+
   function nowStr() {
     const n = new Date();
     return n.toLocaleDateString("nl-NL") + " " + n.toLocaleTimeString("nl-NL", { hour:"2-digit", minute:"2-digit" });
@@ -3632,7 +3597,7 @@ export default function App() {
       <main style={{ padding:"20px 24px" }}>
         { tab==="checklist"    ? <Checklist projects={projects} setProjects={setProjects} canEdit={true} addLog={addLog} highlightProject={highlightProject} clearHighlight={()=>setHighlightProject(null)} />
         : tab==="jaarplanning" ? <Jaarplanning projects={projects} setProjects={setProjects} onProjectClick={goToProject} />
-        : tab==="tijdschema"   ? <Tijdschema projects={projects} setProjects={setProjects} />
+        : tab==="tijdschema"   ? <Tijdschema projects={projects} setProjects={setProjects} updateTeam={updateTeamApp} />
         : tab==="onderdelen"   ? <Onderdelen projects={projects} onProjectClick={goToProject} />
         : tab==="omzet"        ? <Omzet projects={projects} />
         :                        <Logboek logs={logs} onClear={clearLogs} />
