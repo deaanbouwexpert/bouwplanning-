@@ -2707,7 +2707,7 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
                       <div
                         style={{position:"absolute",left:l,width:Math.max(w,6),
                           top:"50%",transform:"translateY(-50%)",height:ROW_H-10,
-                          borderRadius:4,zIndex:2,cursor:"default",pointerEvents:"none",
+                          borderRadius:4,zIndex:2,cursor:"default",
                           background:`linear-gradient(90deg,${color}ee,${color}99)`,
                           boxShadow:`0 2px 6px ${color}44`,
                           display:"flex",alignItems:"center",overflow:"hidden"}}
