@@ -2344,8 +2344,9 @@ function Tijdschema({ projects, setProjects }) {
   });
   const [editWeken,    setEditWeken]    = useState(null);
   const [editNaam,     setEditNaam]     = useState(null);  // pid being name-edited
-  const [editLeider,   setEditLeider]   = useState(null);  // pid being leider-edited
-  const [editCollega,  setEditCollega]  = useState(null);  // pid being collega-edited
+  const [editLeider,   setEditLeider]   = useState(null);
+  const [editCollega,  setEditCollega]  = useState(null);
+  const [editTeamTs,   setEditTeamTs]   = useState(null);  // pid for team popup in tijdschema
   const [filterType,   setFilterType]   = useState("");
   const [filterLeider, setFilterLeider] = useState("");
   const [search,       setSearch]       = useState("");
@@ -2867,8 +2868,8 @@ function Tijdschema({ projects, setProjects }) {
                         {p.name}
                       </div>
                     )}
-                    {/* rij 1: type + weken + overlap */}
-                    <div style={{ display:"flex", gap:3, alignItems:"center" }}>
+                    {/* badges: type + weken + team knop */}
+                    <div style={{ display:"flex", gap:3, alignItems:"center", flexWrap:"nowrap" }}>
                       {typeInfo && (
                         <span style={{ fontSize:8, fontWeight:700, flexShrink:0,
                           background:typeInfo.bg, color:typeInfo.text,
@@ -2890,53 +2891,63 @@ function Tijdschema({ projects, setProjects }) {
                           {wekenNum}w
                         </span>
                       )}
-                      {hasOverlap && <span style={{ fontSize:9, color:"#B71C1C", fontWeight:800 }}>⚠️</span>}
+                      {hasOverlap && <span style={{ fontSize:9, color:"#B71C1C" }}>⚠️</span>}
+                      {/* Team knop */}
+                      <span onClick={e=>{ e.stopPropagation(); setEditTeamTs(editTeamTs===p.id ? null : p.id); }}
+                        style={{ fontSize:9, cursor:"pointer", flexShrink:0,
+                          background: (p.leider||p.collega)?"#E3F2FD":"#F5F5F5",
+                          color: (p.leider||p.collega)?"#1565C0":"#90A4AE",
+                          border: (p.leider||p.collega)?"1px solid #90CAF9":"1px dashed #BDBDBD",
+                          borderRadius:3, padding:"1px 5px", fontWeight:600 }}>
+                        👷 {p.leider||p.collega ? [p.leider,p.collega].filter(Boolean).join(" & ") : "Team"}
+                      </span>
                     </div>
-                    {/* rij 2: leider + collega */}
-                    <div style={{ display:"flex", gap:4, alignItems:"center", flexWrap:"wrap" }}>
-                      {editLeider===p.id ? (
-                        <select autoFocus value={p.leider||""}
-                          onChange={e=>saveLeider(p.id,e.target.value)}
-                          onBlur={()=>setEditLeider(null)}
-                          style={{ fontSize:9, borderRadius:3, border:"1px solid #90CAF9",
-                            padding:"2px 4px", background:"#fff", maxWidth:110 }}>
-                          <option value="">— geen —</option>
-                          {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
-                        </select>
-                      ) : (
-                        <span onClick={e=>{ e.stopPropagation(); setEditLeider(p.id); }}
-                          title="Klik om projectleider te wijzigen"
-                          style={{ fontSize:9, fontWeight:600, cursor:"pointer",
-                            color:p.leider?"#1565C0":"#BDBDBD",
-                            background:p.leider?"#E3F2FD":"transparent",
-                            border:p.leider?"1px solid #90CAF9":"1px dashed #BDBDBD",
-                            borderRadius:3, padding:"1px 5px",
-                            whiteSpace:"nowrap" }}>
-                          {p.leider ? `👷 ${p.leider}` : "+ leider"}
-                        </span>
-                      )}
-                      {editCollega===p.id ? (
-                        <select autoFocus value={p.collega||""}
-                          onChange={e=>saveCollega(p.id,e.target.value)}
-                          onBlur={()=>setEditCollega(null)}
-                          style={{ fontSize:9, borderRadius:3, border:"1px solid #A5D6A7",
-                            padding:"2px 4px", background:"#fff", maxWidth:110 }}>
-                          <option value="">— geen —</option>
-                          {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
-                        </select>
-                      ) : (
-                        <span onClick={e=>{ e.stopPropagation(); setEditCollega(p.id); }}
-                          title="Klik om collega te wijzigen"
-                          style={{ fontSize:9, fontWeight:600, cursor:"pointer",
-                            color:p.collega?"#2E7D32":"#BDBDBD",
-                            background:p.collega?"#E8F5E9":"transparent",
-                            border:p.collega?"1px solid #A5D6A7":"1px dashed #BDBDBD",
-                            borderRadius:3, padding:"1px 5px",
-                            whiteSpace:"nowrap" }}>
-                          {p.collega ? `👷 ${p.collega}` : "+ collega"}
-                        </span>
-                      )}
-                    </div>
+                    {/* Team popup */}
+                    {editTeamTs===p.id && ReactDOM.createPortal(
+                      <div style={{ position:"fixed", inset:0, zIndex:9998 }}
+                        onMouseDown={()=>setEditTeamTs(null)}>
+                        <div style={{ position:"fixed",
+                          top: "50%", left: "50%", transform:"translate(-50%,-50%)",
+                          background:"#fff", borderRadius:10, padding:16,
+                          border:"2px solid #90CAF9", boxShadow:"0 8px 32px rgba(0,0,0,.25)",
+                          minWidth:260, zIndex:9999 }}
+                          onMouseDown={e=>e.stopPropagation()}>
+                          <div style={{ fontWeight:700, fontSize:13, color:"#1C2B3A", marginBottom:12 }}>
+                            👷 Team — {p.name.split(" ").slice(0,3).join(" ")}
+                          </div>
+                          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                            <div>
+                              <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>
+                                👷 Projectleider
+                              </label>
+                              <select value={p.leider||""} onChange={e=>saveLeider(p.id,e.target.value)}
+                                style={{ width:"100%", fontSize:12, padding:"6px 8px", borderRadius:5,
+                                  border:"1px solid #90CAF9", background:"#fff" }}>
+                                <option value="">— geen —</option>
+                                {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>
+                                👷 Collega
+                              </label>
+                              <select value={p.collega||""} onChange={e=>saveCollega(p.id,e.target.value)}
+                                style={{ width:"100%", fontSize:12, padding:"6px 8px", borderRadius:5,
+                                  border:"1px solid #A5D6A7", background:"#fff" }}>
+                                <option value="">— geen —</option>
+                                {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
+                              </select>
+                            </div>
+                            <button onClick={()=>setEditTeamTs(null)}
+                              style={{ marginTop:4, padding:"8px", borderRadius:6, border:"none",
+                                background:"#E65100", color:"#fff", fontWeight:700, fontSize:12, cursor:"pointer" }}>
+                              ✓ Klaar
+                            </button>
+                          </div>
+                        </div>
+                      </div>,
+                      document.body
+                    )}
                   </div>
                 </div>
 
@@ -3346,8 +3357,9 @@ function Tijdschema({ projects, setProjects }) {
   });
   const [editWeken,    setEditWeken]    = useState(null);
   const [editNaam,     setEditNaam]     = useState(null);  // pid being name-edited
-  const [editLeider,   setEditLeider]   = useState(null);  // pid being leider-edited
-  const [editCollega,  setEditCollega]  = useState(null);  // pid being collega-edited
+  const [editLeider,   setEditLeider]   = useState(null);
+  const [editCollega,  setEditCollega]  = useState(null);
+  const [editTeamTs,   setEditTeamTs]   = useState(null);  // pid for team popup in tijdschema
   const [filterType,   setFilterType]   = useState("");
   const [filterLeider, setFilterLeider] = useState("");
   const [search,       setSearch]       = useState("");
