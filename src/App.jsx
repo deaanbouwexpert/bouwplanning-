@@ -2376,12 +2376,8 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
   }
 
   function navigate(dir) {
-    const d=new Date(anchor);
-    if(viewMode==="day")   d.setDate(d.getDate()+dir*30);
-    if(viewMode==="week")  d.setDate(d.getDate()+dir*13*7);
-    if(viewMode==="month") d.setMonth(d.getMonth()+dir*12);
-    if(viewMode==="year")  d.setFullYear(d.getFullYear()+dir*2);
-    setAnchor(d);
+    const el = scrollRef.current; if(!el) return;
+    el.scrollLeft += dir * COL_W;
   }
 
   // Bar position
