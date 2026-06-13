@@ -845,11 +845,17 @@ ${kolommen.includes("Constructie berekening") ? sectie("📐 Constructie bereken
 
 ${kolommen.includes("Steen-strips / Metselwerk") ? sectie("🧱 Steen-strips / Metselwerk", [
   rij("Type", ond.steen_type),
+  rij("Oppervlakte", ond.steen_m2 ? ond.steen_m2 + " m²" : ""),
+  rij("Steencode", ond.steen_code),
   rij("Notitie", ond.steen_notitie),
 ]) : ""}
 
 ${kolommen.includes("Kozijn") ? sectie("🪟 Kozijn", [
   rij("Materiaal", ond.kozijn_materiaal),
+  rij("Kleurcode binnen", ond.kozijn_kleur_binnen),
+  rij("Kleurcode buiten", ond.kozijn_kleur_buiten),
+  rij("Aantal kozijnen", ond.kozijn_aantal ? ond.kozijn_aantal + " stuks" : ""),
+  rij("Buitenmaten", ond.kozijn_maten),
   rij("Notitie", ond.kozijn_notitie),
 ]) : ""}
 
@@ -860,6 +866,10 @@ ${kolommen.includes("Lichtstraat") ? sectie("💡 Lichtstraat", [
 
 ${kolommen.includes("Heiwerk") ? sectie("🔨 Heiwerk", [
   rij("Aantal palen", ond.hei_palen ? ond.hei_palen + " palen" : ""),
+  rij("Diepte palen", ond.hei_diepte ? ond.hei_diepte + " meter" : ""),
+  rij("Toegang via", ond.hei_toegang),
+  rij("Breedte tuinhek", ond.hei_hek_breedte ? ond.hei_hek_breedte + " cm" : ""),
+  rij("Breedte doorgang", ond.hei_doorgang_breedte ? ond.hei_doorgang_breedte + " cm" : ""),
   rij("Notitie", ond.hei_notitie),
 ]) : ""}
 
@@ -1087,12 +1097,18 @@ function TeamEditInline({ p, onSave, onClose }) {
                 </OndRow>
 
                 <OndRow col="Steen-strips / Metselwerk" aan={actief["Steen-strips / Metselwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Steen-strips / Metselwerk"]:!(actief["Steen-strips / Metselwerk"]!==false)}))}>
-                  <OSelect label="Keuze" k="steen_type" options={["Steen-strips","Metselwerk"]}  ond={ond} ondSet={ondSet} />
+                  <OSelect label="Keuze" k="steen_type" options={["Steen-strips","Metselwerk"]} ond={ond} ondSet={ondSet} />
+                  <OField label="Oppervlakte" k="steen_m2" placeholder="bv. 24" type="number" unit="m²" ond={ond} ondSet={ondSet} />
+                  <OField label="Steencode" k="steen_code" placeholder="bv. WF-8203" ond={ond} ondSet={ondSet} />
                   <ONote k="steen_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Kozijn" aan={actief["Kozijn"]!==false} onToggle={()=>setActief(a=>({...a,["Kozijn"]:!(actief["Kozijn"]!==false)}))}>
-                  <OSelect label="Materiaal" k="kozijn_materiaal" options={["Kunststof","Hout","Aluminium"]}  ond={ond} ondSet={ondSet} />
+                  <OSelect label="Materiaal" k="kozijn_materiaal" options={["Kunststof","Hout","Aluminium"]} ond={ond} ondSet={ondSet} />
+                  <OField label="Kleurcode binnen" k="kozijn_kleur_binnen" placeholder="bv. RAL 9010" ond={ond} ondSet={ondSet} />
+                  <OField label="Kleurcode buiten" k="kozijn_kleur_buiten" placeholder="bv. RAL 7016" ond={ond} ondSet={ondSet} />
+                  <OField label="Aantal kozijnen" k="kozijn_aantal" placeholder="bv. 3" type="number" unit="stuks" ond={ond} ondSet={ondSet} />
+                  <OField label="Buitenmaten" k="kozijn_maten" placeholder="bv. 120x140, 80x200" ond={ond} ondSet={ondSet} />
                   <ONote k="kozijn_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
@@ -1102,7 +1118,15 @@ function TeamEditInline({ p, onSave, onClose }) {
                 </OndRow>
 
                 <OndRow col="Heiwerk" aan={actief["Heiwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Heiwerk"]:!(actief["Heiwerk"]!==false)}))}>
-                  <OField label="Aantal palen" k="hei_palen" placeholder="bv. 12" type="number" unit="palen"  ond={ond} ondSet={ondSet} />
+                  <OField label="Aantal palen" k="hei_palen" placeholder="bv. 12" type="number" unit="palen" ond={ond} ondSet={ondSet} />
+                  <OField label="Diepte palen" k="hei_diepte" placeholder="bv. 8" type="number" unit="meter" ond={ond} ondSet={ondSet} />
+                  <OSelect label="Toegang via" k="hei_toegang" options={["Achterom / tuinhek","Binnen door de woning"]} ond={ond} ondSet={ondSet} />
+                  {(ond["hei_toegang"]||"").includes("Achterom") && (
+                    <OField label="Breedte tuinhek" k="hei_hek_breedte" placeholder="bv. 90" type="number" unit="cm" ond={ond} ondSet={ondSet} />
+                  )}
+                  {(ond["hei_toegang"]||"").includes("Binnen") && (
+                    <OField label="Breedte doorgang" k="hei_doorgang_breedte" placeholder="bv. 80" type="number" unit="cm" ond={ond} ondSet={ondSet} />
+                  )}
                   <ONote k="hei_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
@@ -1650,11 +1674,17 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                     const col = COLUMNS[ci];
                     const infos = [];
                     if (col === "Kozijn") {
-                      if (ond.kozijn_materiaal) infos.push(ond.kozijn_materiaal);
-                      if (ond.kozijn_notitie)   infos.push(ond.kozijn_notitie);
+                      if (ond.kozijn_materiaal)    infos.push(ond.kozijn_materiaal);
+                      if (ond.kozijn_kleur_binnen) infos.push("Binnen: " + ond.kozijn_kleur_binnen);
+                      if (ond.kozijn_kleur_buiten) infos.push("Buiten: " + ond.kozijn_kleur_buiten);
+                      if (ond.kozijn_aantal)       infos.push(ond.kozijn_aantal + "x kozijn");
+                      if (ond.kozijn_maten)        infos.push(ond.kozijn_maten);
+                      if (ond.kozijn_notitie)      infos.push(ond.kozijn_notitie);
                     }
                     if (col === "Steen-strips / Metselwerk") {
                       if (ond.steen_type)    infos.push(ond.steen_type);
+                      if (ond.steen_m2)      infos.push(ond.steen_m2 + " m²");
+                      if (ond.steen_code)    infos.push("Code: " + ond.steen_code);
                       if (ond.steen_notitie) infos.push(ond.steen_notitie);
                     }
                     if (col === "Lichtstraat") {
@@ -1662,8 +1692,12 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                       if (ond.lichtstraat_notitie) infos.push(ond.lichtstraat_notitie);
                     }
                     if (col === "Heiwerk") {
-                      if (ond.hei_palen)   infos.push(ond.hei_palen + " palen");
-                      if (ond.hei_notitie) infos.push(ond.hei_notitie);
+                      if (ond.hei_palen)           infos.push(ond.hei_palen + " palen");
+                      if (ond.hei_diepte)          infos.push(ond.hei_diepte + "m diep");
+                      if (ond.hei_toegang)         infos.push(ond.hei_toegang);
+                      if (ond.hei_hek_breedte)     infos.push("Hek: " + ond.hei_hek_breedte + "cm");
+                      if (ond.hei_doorgang_breedte) infos.push("Doorgang: " + ond.hei_doorgang_breedte + "cm");
+                      if (ond.hei_notitie)         infos.push(ond.hei_notitie);
                     }
                     if (col === "Fundering") {
                       if (ond.fund_type)    infos.push(ond.fund_type);
