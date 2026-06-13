@@ -3297,7 +3297,21 @@ export default function App() {
         await saveData("bouw_projects", DEFAULT_PROJECTS);
         setProjects(DEFAULT_PROJECTS);
       } else {
-        setProjects(savedProjects);
+        // Migratie: voeg bedrag toe vanuit DEFAULT_PROJECTS als het nog leeg is
+        const bedragMap = {};
+        DEFAULT_PROJECTS.forEach(p => { if (p.bedrag) bedragMap[p.id] = p.bedrag; });
+        let migrated = false;
+        const merged = savedProjects.map(p => {
+          if (!p.bedrag && bedragMap[p.id]) {
+            migrated = true;
+            return { ...p, bedrag: bedragMap[p.id] };
+          }
+          return p;
+        });
+        if (migrated) {
+          await saveData("bouw_projects", merged);
+        }
+        setProjects(merged);
       }
       setLogs(savedLogs);
       setUsers(savedUsers);
