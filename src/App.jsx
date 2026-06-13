@@ -2539,7 +2539,13 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
         </div>
         <button onClick={()=>navigate(-1)} style={{background:"#1C2B3A",color:"#fff",border:"none",
           borderRadius:6,padding:"6px 14px",cursor:"pointer",fontWeight:700,fontSize:14}}>◀</button>
-        <button onClick={()=>{setAnchor(new Date(today.getFullYear(),today.getMonth(),1));setViewMode("month");}}
+        <button onClick={()=>{
+            const d = new Date(today);
+            if (viewMode==="day")   { setAnchor(new Date(d.getFullYear(),d.getMonth(),d.getDate())); }
+            else if (viewMode==="week")  { setAnchor(startOfWeek(d)); }
+            else if (viewMode==="month") { setAnchor(new Date(d.getFullYear(),d.getMonth(),1)); }
+            else { setAnchor(new Date(d.getFullYear(),0,1)); }
+          }}
           style={{background:"#FFF3E0",color:"#E65100",border:"1px solid #FFCC80",
             borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>
           Vandaag
