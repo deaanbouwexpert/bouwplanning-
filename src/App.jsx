@@ -636,15 +636,8 @@ function DatumPicker({ label, value, onChange }) {
       const r = btnRef.current.getBoundingClientRect();
       const calH = 270;
       const calW = 228;
-      // Always prefer above, fall back to below if not enough space
-      const spaceAbove = r.top;
-      const spaceBelow = window.innerHeight - r.bottom;
-      const top = spaceAbove >= calH
-        ? (r.top - calH - 4 + window.scrollY)
-        : spaceBelow >= calH
-          ? (r.bottom + 4 + window.scrollY)
-          : (r.top - calH - 4 + window.scrollY);
-      // Keep within horizontal bounds
+      // Always open above the button
+      const top = r.top - calH - 4 + window.scrollY;
       const left = Math.min(r.left + window.scrollX, window.innerWidth - calW - 8 + window.scrollX);
       setCalPos({ top, left: Math.max(4, left) });
     }
