@@ -825,6 +825,7 @@ function drukWerkbon(p) {
 </div>
 
 ${kolommen.includes("Graafwerk") ? sectie("🚜 Graafwerk", [
+  rij("Ja / Nee", ond.graaf_jn),
   rij("Grond afvoeren", ond.graaf_afvoer),
   rij("Hoeveelheid grond", ond.graaf_m3 ? ond.graaf_m3 + " m³" : ""),
   rij("Tuintegels opnemen", ond.graaf_tegels),
@@ -833,6 +834,7 @@ ${kolommen.includes("Graafwerk") ? sectie("🚜 Graafwerk", [
 ]) : ""}
 
 ${kolommen.includes("Staal") ? sectie("⚙️ Staal", [
+  rij("Ja / Nee", ond.staal_jn),
   rij("Achtergevel verwijderen", ond.staal_achtergevel),
   rij("Binnenmuur dragend", ond.staal_binnen_dragend),
   rij("Buitenmuur dragend", ond.staal_buiten_dragend),
@@ -840,10 +842,12 @@ ${kolommen.includes("Staal") ? sectie("⚙️ Staal", [
 ]) : ""}
 
 ${kolommen.includes("Constructie berekening") ? sectie("📐 Constructie berekening", [
+  rij("Ja / Nee", ond.constructie_jn),
   rij("Notitie", ond.constructie_notitie),
 ]) : ""}
 
 ${kolommen.includes("Steen-strips / Metselwerk") ? sectie("🧱 Steen-strips / Metselwerk", [
+  rij("Ja / Nee", ond.steen_jn),
   rij("Type", ond.steen_type),
   rij("Oppervlakte", ond.steen_m2 ? ond.steen_m2 + " m²" : ""),
   rij("Steencode", ond.steen_code),
@@ -851,6 +855,7 @@ ${kolommen.includes("Steen-strips / Metselwerk") ? sectie("🧱 Steen-strips / M
 ]) : ""}
 
 ${kolommen.includes("Kozijn") ? sectie("🪟 Kozijn", [
+  rij("Ja / Nee", ond.kozijn_jn),
   rij("Materiaal", ond.kozijn_materiaal),
   rij("Kleurcode binnen", ond.kozijn_kleur_binnen),
   rij("Kleurcode buiten", ond.kozijn_kleur_buiten),
@@ -860,11 +865,13 @@ ${kolommen.includes("Kozijn") ? sectie("🪟 Kozijn", [
 ]) : ""}
 
 ${kolommen.includes("Lichtstraat") ? sectie("💡 Lichtstraat", [
+  rij("Ja / Nee", ond.licht_jn),
   rij("Maat", ond.lichtstraat_maat),
   rij("Notitie", ond.lichtstraat_notitie),
 ]) : ""}
 
 ${kolommen.includes("Heiwerk") ? sectie("🔨 Heiwerk", [
+  rij("Ja / Nee", ond.hei_jn),
   rij("Aantal palen", ond.hei_palen ? ond.hei_palen + " palen" : ""),
   rij("Diepte palen", ond.hei_diepte ? ond.hei_diepte + " meter" : ""),
   rij("Toegang via", ond.hei_toegang),
@@ -874,12 +881,14 @@ ${kolommen.includes("Heiwerk") ? sectie("🔨 Heiwerk", [
 ]) : ""}
 
 ${kolommen.includes("Fundering") ? sectie("🏛️ Fundering", [
+  rij("Ja / Nee", ond.fund_jn),
   rij("Type", ond.fund_type),
   rij("Beton bestellen", ond.fund_beton ? ond.fund_beton + " m³" : ""),
   rij("Notitie", ond.fund_notitie),
 ]) : ""}
 
 ${kolommen.includes("Electra") ? sectie("⚡ Electra", [
+  rij("Ja / Nee", ond.electra_jn),
   rij("Stopcontacten", ond.el_stopcontacten ? ond.el_stopcontacten + " stuks" : ""),
   rij("Spotjes binnen", ond.el_spotjes_binnen ? ond.el_spotjes_binnen + " stuks" : ""),
   rij("Spotjes buiten", ond.el_spotjes_buiten ? ond.el_spotjes_buiten + " stuks" : ""),
@@ -892,46 +901,60 @@ ${kolommen.includes("Electra") ? sectie("⚡ Electra", [
 ]) : ""}
 
 ${kolommen.includes("Verwarming") ? sectie("🌡️ Verwarming", [
+  rij("Ja / Nee", ond.verw_jn),
   rij("Type", ond.verw_type),
   rij("Aantal radiatoren", ond.verw_radiator_aantal ? ond.verw_radiator_aantal + " stuks" : ""),
-  rij("Oppervlakte", ond.verw_m2 ? ond.verw_m2 + " m²" : ""),
+  rij("Oppervlakte vloerverwarming", ond.verw_m2 ? ond.verw_m2 + " m²" : ""),
   rij("Notitie", ond.verw_notitie),
 ]) : ""}
 
 ${kolommen.includes("Dakbedekking") ? sectie("🏠 Dakbedekking", [
+  rij("Ja / Nee", ond.dak_jn),
   rij("Type", ond.dak_type),
   rij("Notitie", ond.dak_notitie),
 ]) : ""}
 
+${kolommen.includes("Hijsen") ? sectie("🏗️ Hijsen", [
+  rij("Ja / Nee", ond.hijsen_jn),
+  rij("Notitie", ond.hijsen_notitie),
+]) : ""}
+
 ${kolommen.includes("Tegelwerk") ? sectie("🔲 Tegelwerk", [
+  rij("Ja / Nee", ond.tegel_jn),
   rij("Oppervlakte", ond.tegel_m2 ? ond.tegel_m2 + " m²" : ""),
   rij("Notitie", ond.tegel_notitie),
 ]) : ""}
 
 ${kolommen.includes("Stucwerk") ? sectie("🪣 Stucwerk", [
+  rij("Ja / Nee", ond.stuc_jn),
   rij("Oppervlakte", ond.stuc_m2 ? ond.stuc_m2 + " m²" : ""),
   rij("Notitie", ond.stuc_notitie),
 ]) : ""}
 
 ${kolommen.includes("Loodgieter") ? sectie("🔧 Loodgieter", [
+  rij("Ja / Nee", ond.lood_jn),
   rij("Buitenkraan", ond.lood_buitenkraan),
   rij("Notitie", ond.lood_notitie),
 ]) : ""}
 
 ${kolommen.includes("Container") ? sectie("📦 Container", [
+  rij("Ja / Nee", ond.cont_jn),
   rij("Aantal", ond.cont_aantal ? ond.cont_aantal + " stuks" : ""),
   rij("Notitie", ond.cont_notitie),
 ]) : ""}
 
 ${kolommen.includes("Steigers") ? sectie("🏗️ Steigers", [
+  rij("Ja / Nee", ond.steigers_jn),
   rij("Notitie", ond.steigers_notitie),
 ]) : ""}
 
 ${kolommen.includes("Trap") ? sectie("🪜 Trap", [
+  rij("Ja / Nee", ond.trap_jn),
   rij("Notitie", ond.trap_notitie),
 ]) : ""}
 
 ${kolommen.includes("Extra") ? sectie("➕ Extra", [
+  rij("Ja / Nee", ond.extra_jn),
   rij("Notitie", ond.extra_notitie),
 ]) : ""}
 
