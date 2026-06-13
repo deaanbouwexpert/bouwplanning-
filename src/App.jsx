@@ -2575,15 +2575,7 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
           borderRadius:10,border:"1px solid #DDE3E9",
           boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
       <div ref={scrollRef}
-        style={{overflowX:"scroll",background:"#fff",
-          cursor:"grab",userSelect:"none"}}
-        onMouseDown={e=>{
-          const el=scrollRef.current; const sx=e.pageX; const sl=el.scrollLeft;
-          e.preventDefault();
-          function mv(ev){el.scrollLeft=sl-(ev.pageX-sx); el.style.cursor="grabbing";}
-          function up(){el.style.cursor="grab"; document.removeEventListener("mousemove",mv); document.removeEventListener("mouseup",up);}
-          document.addEventListener("mousemove",mv); document.addEventListener("mouseup",up);
-        }}>
+        style={{overflowX:"auto",background:"#fff"}}>
 
         <div style={{minWidth:NAME_W+totalW}}>
 
@@ -2608,7 +2600,7 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
             <div style={{width:NAME_W,minWidth:NAME_W,flexShrink:0,position:"sticky",left:0,zIndex:11,
               background:"#1C2B3A",padding:"3px 12px",display:"flex",alignItems:"center",
               fontSize:9,color:"#90A4AE",borderRight:"2px solid #0D1B2A"}}>
-              ← sleep tijdlijn → &nbsp;·&nbsp; klik naam of 👷 om te wijzigen
+              klik naam of 👷 om te wijzigen
             </div>
             {cols.map((c,i)=>(
               <div key={i} style={{width:COL_W,minWidth:COL_W,flexShrink:0,textAlign:"center",
@@ -2715,7 +2707,7 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
                       <div
                         style={{position:"absolute",left:l,width:Math.max(w,6),
                           top:"50%",transform:"translateY(-50%)",height:ROW_H-10,
-                          borderRadius:4,zIndex:2,cursor:"default",
+                          borderRadius:4,zIndex:2,cursor:"default",pointerEvents:"none",
                           background:`linear-gradient(90deg,${color}ee,${color}99)`,
                           boxShadow:`0 2px 6px ${color}44`,
                           display:"flex",alignItems:"center",overflow:"hidden"}}
