@@ -2592,9 +2592,12 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
       </div>
 
       {/* GANTT */}
+      <div ref={ganttRef}
+        style={{overflowY:"auto",maxHeight:"calc(100vh - 260px)",
+          borderRadius:10,border:"1px solid #DDE3E9",
+          boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
       <div ref={scrollRef}
-        style={{overflowX:"scroll",borderRadius:10,border:"1px solid #DDE3E9",
-          boxShadow:"0 2px 12px rgba(0,0,0,.07)",background:"#fff",
+        style={{overflowX:"scroll",background:"#fff",
           cursor:"grab",userSelect:"none"}}
         onMouseDown={e=>{
           if(dragRef.current.active) return;
@@ -2758,6 +2761,7 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
         </div>
       </div>
 
+      </div>
       </div>
       {/* Legenda */}
       <div style={{marginTop:10,display:"flex",gap:14,flexWrap:"wrap",fontSize:11,color:"#78909C",alignItems:"center"}}>
