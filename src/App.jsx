@@ -2790,8 +2790,200 @@ function Tijdschema({ projects, setProjects }) {
   );
 }
 
-// ── LOGBOEK ───────────────────────────────────────────────────────────
-function Logboek({ logs, onClear }) {
+// ── OMZET ─────────────────────────────────────────────────────────────
+function Omzet({ projects }) {
+  const [jaar, setJaar] = useState(2026);
+
+  function parseDate(d="") {
+    const m = d.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+    if (m) return { day:+m[1], month:+m[2]-1, year:+m[3] };
+    return null;
+  }
+
+  const jaren = [...new Set(projects.map(p => { const d = parseDate(p.date); return d?.year; }).filter(Boolean))].sort();
+
+  const projs = projects.filter(p => {
+    const d = parseDate(p.date);
+    return d?.year === jaar;
+  });
+
+  // Per maand
+  const maandData = YEAR_MONTHS.map((maand, mi) => {
+    const lijst = projs.filter(p => {
+      const d = parseDate(p.date);
+      return d?.month === mi;
+    });
+    const totaal = lijst.reduce((s, p) => s + (Number(p.bedrag)||0), 0);
+    return { maand, lijst, totaal };
+  });
+
+  const jaarTotaal = maandData.reduce((s, m) => s + m.totaal, 0);
+  const aantalProjecten = projs.length;
+  const gemiddeld = aantalProjecten > 0 ? Math.round(jaarTotaal / aantalProjecten) : 0;
+  const hoogste = projs.reduce((max, p) => Math.max(max, Number(p.bedrag)||0), 0);
+
+  const maxMaand = Math.max(...maandData.map(m => m.totaal), 1);
+
+  function fmt(n) {
+    return "€ " + Number(n).toLocaleString("nl-NL");
+  }
+
+  return (
+    <div style={{ fontFamily:"Inter,sans-serif", maxWidth:900 }}>
+
+      {/* Jaar selector + KPI's */}
+      <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:20, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:6 }}>
+          {jaren.map(j => (
+            <button key={j} onClick={()=>setJaar(j)}
+              style={{ padding:"7px 18px", borderRadius:6, border:"none", cursor:"pointer",
+                fontWeight:700, fontSize:13,
+                background: jaar===j ? "#1C2B3A" : "#F0F2F5",
+                color: jaar===j ? "#fff" : "#546E7A" }}>
+              {j}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* KPI kaartjes */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:12, marginBottom:28 }}>
+        {[
+          { label:"Totale omzet", waarde: fmt(jaarTotaal), kleur:"#E65100", bg:"#FFF3E0", border:"#FFCC80" },
+          { label:"Aantal projecten", waarde: aantalProjecten, kleur:"#1565C0", bg:"#E3F2FD", border:"#90CAF9" },
+          { label:"Gemiddeld per project", waarde: fmt(gemiddeld), kleur:"#2E7D32", bg:"#E8F5E9", border:"#A5D6A7" },
+          { label:"Hoogste project", waarde: fmt(hoogste), kleur:"#6A1B9A", bg:"#F3E5F5", border:"#CE93D8" },
+        ].map(({ label, waarde, kleur, bg, border }) => (
+          <div key={label} style={{ background:bg, border:`1px solid ${border}`,
+            borderRadius:10, padding:"14px 16px" }}>
+            <div style={{ fontSize:11, color:"#78909C", fontWeight:600, marginBottom:6 }}>{label}</div>
+            <div style={{ fontSize:18, fontWeight:900, color:kleur }}>{waarde}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Grafiek + tabel */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+
+        {/* Staafgrafiek */}
+        <div style={{ background:"#fff", border:"1px solid #DDE3E9", borderRadius:10, padding:"16px" }}>
+          <div style={{ fontWeight:700, fontSize:14, color:"#1C2B3A", marginBottom:14 }}>📊 Omzet per maand</div>
+          <div style={{ display:"flex", alignItems:"flex-end", gap:4, height:160 }}>
+            {maandData.map(({ maand, totaal }) => {
+              const h = maxMaand > 0 ? Math.max((totaal/maxMaand)*140, totaal>0?6:0) : 0;
+              return (
+                <div key={maand} style={{ flex:1, display:"flex", flexDirection:"column",
+                  alignItems:"center", gap:3 }}>
+                  {totaal > 0 && (
+                    <div style={{ fontSize:8, fontWeight:700, color:"#E65100",
+                      whiteSpace:"nowrap", transform:"rotate(-60deg)", marginBottom:2 }}>
+                      {fmt(totaal).replace("€ ","")}
+                    </div>
+                  )}
+                  <div style={{ width:"100%", height:h, borderRadius:"3px 3px 0 0",
+                    background: totaal>0 ? "#E65100" : "#F0F2F5",
+                    transition:"height .3s" }} />
+                  <div style={{ fontSize:9, color:"#90A4AE", fontWeight:600 }}>{maand}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Maand tabel */}
+        <div style={{ background:"#fff", border:"1px solid #DDE3E9", borderRadius:10, overflow:"hidden" }}>
+          <div style={{ fontWeight:700, fontSize:14, color:"#1C2B3A", padding:"14px 16px",
+            borderBottom:"1px solid #F0F2F5" }}>📋 Overzicht per maand</div>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+            <thead>
+              <tr style={{ background:"#F8FAFB" }}>
+                <th style={{ padding:"8px 14px", textAlign:"left", fontWeight:700,
+                  color:"#546E7A", fontSize:11 }}>Maand</th>
+                <th style={{ padding:"8px 14px", textAlign:"center", fontWeight:700,
+                  color:"#546E7A", fontSize:11 }}>Projecten</th>
+                <th style={{ padding:"8px 14px", textAlign:"right", fontWeight:700,
+                  color:"#546E7A", fontSize:11 }}>Omzet</th>
+              </tr>
+            </thead>
+            <tbody>
+              {maandData.map(({ maand, lijst, totaal }, i) => (
+                <tr key={maand} style={{ background: i%2===0?"#fff":"#FAFBFC",
+                  borderTop:"1px solid #F0F2F5" }}>
+                  <td style={{ padding:"8px 14px", fontWeight:600, color:"#1C2B3A" }}>{maand}</td>
+                  <td style={{ padding:"8px 14px", textAlign:"center",
+                    color: lijst.length>0?"#E65100":"#BDBDBD", fontWeight:700 }}>
+                    {lijst.length||"—"}
+                  </td>
+                  <td style={{ padding:"8px 14px", textAlign:"right",
+                    fontWeight: totaal>0?800:400,
+                    color: totaal>0?"#2E7D32":"#BDBDBD" }}>
+                    {totaal>0 ? fmt(totaal) : "—"}
+                  </td>
+                </tr>
+              ))}
+              <tr style={{ background:"#1C2B3A", borderTop:"2px solid #E65100" }}>
+                <td style={{ padding:"10px 14px", fontWeight:900, color:"#fff", fontSize:13 }}>
+                  Totaal {jaar}
+                </td>
+                <td style={{ padding:"10px 14px", textAlign:"center",
+                  fontWeight:700, color:"#FFF3E0" }}>{aantalProjecten}</td>
+                <td style={{ padding:"10px 14px", textAlign:"right",
+                  fontWeight:900, color:"#FF8A65", fontSize:14 }}>
+                  {fmt(jaarTotaal)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Project lijst per maand */}
+      <div style={{ marginTop:20, display:"flex", flexDirection:"column", gap:12 }}>
+        {maandData.filter(m => m.lijst.length > 0).map(({ maand, lijst, totaal }) => (
+          <div key={maand} style={{ background:"#fff", border:"1px solid #DDE3E9",
+            borderRadius:10, overflow:"hidden" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10,
+              padding:"10px 16px", background:"#F8FAFB", borderBottom:"1px solid #F0F2F5" }}>
+              <span style={{ fontWeight:800, fontSize:13, color:"#1C2B3A" }}>{maand} {jaar}</span>
+              <span style={{ background:"#FFF3E0", color:"#E65100", borderRadius:4,
+                padding:"1px 8px", fontSize:11, fontWeight:700 }}>
+                {lijst.length} project{lijst.length!==1?"en":""}
+              </span>
+              <span style={{ marginLeft:"auto", fontWeight:800, color:"#2E7D32", fontSize:13 }}>
+                {fmt(totaal)}
+              </span>
+            </div>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+              <tbody>
+                {lijst.sort((a,b)=>(Number(b.bedrag)||0)-(Number(a.bedrag)||0)).map((p,i) => (
+                  <tr key={p.id} style={{ borderTop: i>0?"1px solid #F0F2F5":"none",
+                    background: i%2===0?"#fff":"#FAFBFC" }}>
+                    <td style={{ padding:"8px 16px", fontWeight:600, color:"#1C2B3A" }}>
+                      {p.name}
+                    </td>
+                    <td style={{ padding:"8px 16px", color:"#90A4AE", fontSize:11 }}>
+                      {p.type||"—"}
+                    </td>
+                    <td style={{ padding:"8px 16px", color:"#546E7A", fontSize:11 }}>
+                      {p.leider||"—"}
+                    </td>
+                    <td style={{ padding:"8px 16px", textAlign:"right",
+                      fontWeight: p.bedrag?800:400,
+                      color: p.bedrag?"#2E7D32":"#BDBDBD" }}>
+                      {p.bedrag ? fmt(p.bedrag) : "Geen bedrag"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+({ logs, onClear }) {
   const TYPE_META = {
     "status":    { icon:"✏️", color:"#1565C0", bg:"#E3F2FD", label:"Status gewijzigd" },
     "project_add":    { icon:"➕", color:"#2E7D32", bg:"#E8F5E9", label:"Project toegevoegd" },
@@ -3134,6 +3326,7 @@ const TABS = [
   { key:"jaarplanning", label:"📅 Jaarplanning" },
   { key:"tijdschema",   label:"⏰ Tijdschema" },
   { key:"onderdelen",   label:"🔩 Onderdelen" },
+  { key:"omzet",        label:"💶 Omzet" },
   { key:"logboek",      label:"📝 Logboek" },
 ];
 
@@ -3412,6 +3605,7 @@ export default function App() {
           : tab==="jaarplanning" ? "Jaarplanning"
           : tab==="tijdschema"   ? "Weekoverzicht"
           : tab==="onderdelen"   ? "Onderdelen overzicht"
+          : tab==="omzet"        ? "Omzet overzicht"
           :                       "Wijzigingenlog" }
         </h2>
       </div>
@@ -3422,6 +3616,7 @@ export default function App() {
         : tab==="jaarplanning" ? <Jaarplanning projects={projects} setProjects={setProjects} onProjectClick={goToProject} />
         : tab==="tijdschema"   ? <Tijdschema projects={projects} setProjects={setProjects} />
         : tab==="onderdelen"   ? <Onderdelen projects={projects} onProjectClick={goToProject} />
+        : tab==="omzet"        ? <Omzet projects={projects} />
         :                        <Logboek logs={logs} onClear={clearLogs} />
         }
       </main>
