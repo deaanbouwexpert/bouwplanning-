@@ -2735,6 +2735,967 @@ function Tijdschema({ projects, setProjects }) {
         </span>
       </div>
 
+      {/* ── GANTT ── één scrollbare container, sticky naam-kolom ── */}
+      <div ref={timelineRef}
+        style={{ overflowX:"scroll", overflowY:"auto", borderRadius:10,
+          border:"1px solid #DDE3E9", boxShadow:"0 2px 12px rgba(0,0,0,.07)",
+          background:"#fff", cursor:"grab", userSelect:"none",
+          WebkitOverflowScrolling:"touch" }}
+        onMouseDown={e=>{
+          if (isDraggingBar.current) return;
+          if (e.target.closest && e.target.closest("[data-gantt-bar]")) return;
+          const el = timelineRef.current;
+          if (!el) return;
+          const startX = e.pageX;
+          const startScroll = el.scrollLeft;
+          e.preventDefault();
+          function mv(ev) {
+            if (isDraggingBar.current) return;
+            el.scrollLeft = startScroll - (ev.pageX - startX);
+            el.style.cursor = "grabbing";
+          }
+          function up() {
+            el.style.cursor = "grab";
+            document.removeEventListener("mousemove", mv);
+            document.removeEventListener("mouseup", up);
+          }
+          document.addEventListener("mousemove", mv);
+          document.addEventListener("mouseup", up);
+        }}>
+
+        {/* min-width zodat tabel breed genoeg is om te scrollen */}
+        <div style={{ minWidth: NAME_W + cols.length * COL_W }}>
+
+          {/* ── HEADER RIJ 1: maand/jaar spans ── */}
+          <div style={{ display:"flex", background:"#0D1B2A", color:"#fff",
+            position:"sticky", top:0, zIndex:10 }}>
+            <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
+              position:"sticky", left:0, zIndex:11, background:"#0D1B2A",
+              padding:"0 10px", height:HEADER_H, display:"flex", alignItems:"center",
+              fontWeight:800, fontSize:11, borderRight:"3px solid #263547" }}>
+              🏗️ Project / Team
+            </div>
+            {headerGroups.map((g,i) => (
+              <div key={i} style={{ width:g.count*COL_W, flexShrink:0,
+                textAlign:"center", height:HEADER_H,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontWeight:700, fontSize:11,
+                borderLeft: i>0 ? "1px solid #263547" : "none" }}>
+                {g.label}
+              </div>
+            ))}
+          </div>
+
+          {/* ── HEADER RIJ 2: dag/week/maand labels ── */}
+          <div style={{ display:"flex", background:"#1C2B3A", color:"#fff",
+            position:"sticky", top:HEADER_H, zIndex:10,
+            borderBottom:"2px solid #0D1B2A" }}>
+            <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
+              position:"sticky", left:0, zIndex:11, background:"#1C2B3A",
+              padding:"0 10px", height:HEADER_H, display:"flex", alignItems:"center",
+              fontSize:9, color:"#90A4AE", fontWeight:600,
+              borderRight:"3px solid #0D1B2A" }}>
+              ← sleep tijdlijn →
+            </div>
+            {cols.map((c,i) => (
+              <div key={i} style={{ width:COL_W, minWidth:COL_W, flexShrink:0,
+                textAlign:"center", height:HEADER_H,
+                display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+                background: c.isToday?"#E65100":(c.isWeekend?"#263547":"#1C2B3A"),
+                borderLeft: i===0?"none":"1px solid #263547",
+                fontSize:10, fontWeight:c.isToday?800:500 }}>
+                <div>{c.label}</div>
+                {c.subLabel && viewMode!=="month" && viewMode!=="year" &&
+                  <div style={{ fontSize:8, opacity:.7 }}>{c.subLabel}</div>}
+              </div>
+            ))}
+          </div>
+
+          {/* ── PROJECT RIJEN ── */}
+          {visibleProjects.length === 0 ? (
+            <div style={{ padding:40, textAlign:"center", color:"#90A4AE", fontSize:13 }}>
+              Geen projecten in deze periode
+            </div>
+          ) : visibleProjects.map((p, pi) => {
+            const bar      = getBar(p);
+            const color    = PROJ_COLORS[pi % PROJ_COLORS.length];
+            const typeInfo = PROJECT_TYPES.find(t=>t.label===p.type);
+            const hasOverlap = overlapSet.has(p.id);
+            const defaultWeken = p.type==="Dakopbouw"?8: p.type==="Dakkapel"?1:4;
+            const wekenNum = parseInt(p.weken)||defaultWeken;
+
+            return (
+              <div key={p.id} style={{ display:"flex", height:ROW_H,
+                background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
+                borderBottom:"1px solid #F0F2F5" }}
+                onMouseEnter={e=>e.currentTarget.style.background=hasOverlap?"#FFEBEE":"#EBF3FF"}
+                onMouseLeave={e=>e.currentTarget.style.background=hasOverlap?"#FFF5F5":pi%2===0?"#FAFBFC":"#fff"}>
+
+                {/* NAAM CEL — sticky */}
+                <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
+                  position:"sticky", left:0, zIndex:4,
+                  background: hasOverlap?"inherit": pi%2===0?"#FAFBFC":"#fff",
+                  borderRight:"3px solid #DDE3E9",
+                  borderLeft:"3px solid "+color,
+                  padding:"2px 6px", display:"flex", alignItems:"center",
+                  boxSizing:"border-box" }}>
+                  <div style={{ flex:1, overflow:"hidden" }}>
+                    {/* naam */}
+                    {editNaam===p.id ? (
+                      <input autoFocus defaultValue={p.name}
+                        style={{ width:"100%", fontSize:10, fontWeight:700, padding:"1px 4px",
+                          borderRadius:3, border:"1px solid #E65100", outline:"none", boxSizing:"border-box" }}
+                        onKeyDown={e=>{ if(e.key==="Enter") saveNaam(p.id,e.target.value); if(e.key==="Escape") setEditNaam(null); }}
+                        onBlur={e=>saveNaam(p.id,e.target.value)} />
+                    ) : (
+                      <div onClick={()=>setEditNaam(p.id)}
+                        style={{ fontWeight:700, fontSize:10, color:"#1C2B3A", cursor:"text",
+                          whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {p.name}
+                      </div>
+                    )}
+                    {/* badges */}
+                    <div style={{ display:"flex", gap:3, alignItems:"center", marginTop:1, flexWrap:"nowrap" }}>
+                      {typeInfo && (
+                        <span style={{ fontSize:8, fontWeight:700, flexShrink:0,
+                          background:typeInfo.bg, color:typeInfo.text,
+                          border:`1px solid ${typeInfo.border}`, borderRadius:3, padding:"0 4px" }}>
+                          {typeInfo.label}
+                        </span>
+                      )}
+                      {editWeken===p.id ? (
+                        <input defaultValue={wekenNum} autoFocus type="number" min="1" max="52"
+                          style={{ width:34, fontSize:9, padding:"1px 3px", borderRadius:3,
+                            border:"1px solid #E65100", outline:"none", textAlign:"center" }}
+                          onKeyDown={e=>{ if(e.key==="Enter") saveWeken(p.id,e.target.value); if(e.key==="Escape") setEditWeken(null); }}
+                          onBlur={e=>saveWeken(p.id,e.target.value)} />
+                      ) : (
+                        <span onClick={e=>{ e.stopPropagation(); setEditWeken(p.id); }}
+                          style={{ fontSize:9, color:"#fff", flexShrink:0, cursor:"pointer",
+                            background: p.type==="Dakopbouw"?"#6A1B9A":p.type==="Dakkapel"?"#2E7D32":color,
+                            borderRadius:3, padding:"1px 5px", fontWeight:700 }}>
+                          {wekenNum}w
+                        </span>
+                      )}
+                      {hasOverlap && <span style={{ fontSize:9, color:"#B71C1C", fontWeight:800 }}>⚠️</span>}
+                      {editLeider===p.id ? (
+                        <select autoFocus value={p.leider||""}
+                          onChange={e=>saveLeider(p.id,e.target.value)}
+                          onBlur={()=>setEditLeider(null)}
+                          style={{ fontSize:9, borderRadius:3, border:"1px solid #90CAF9",
+                            padding:"1px 3px", background:"#fff", maxWidth:85 }}>
+                          <option value="">— geen —</option>
+                          {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
+                        </select>
+                      ) : (
+                        <span onClick={e=>{ e.stopPropagation(); setEditLeider(p.id); }}
+                          style={{ fontSize:9, color:p.leider?"#546E7A":"#BDBDBD",
+                            cursor:"pointer", whiteSpace:"nowrap", overflow:"hidden",
+                            textOverflow:"ellipsis", maxWidth:78 }}>
+                          {p.leider ? `👷 ${p.leider}` : "+ leider"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* TIJDLIJN CEL */}
+                <div style={{ position:"relative", flex:1,
+                  minWidth: cols.length * COL_W }}>
+
+                  {/* kolom achtergronden */}
+                  {cols.map((c,ci) => (
+                    <div key={ci} style={{ position:"absolute", left:ci*COL_W, top:0,
+                      width:COL_W, height:"100%", boxSizing:"border-box",
+                      background: c.isToday?"rgba(230,81,0,.07)":(c.isWeekend?"rgba(0,0,0,.02)":"transparent"),
+                      borderLeft: c.isToday?"2px solid rgba(230,81,0,.5)":"1px solid #F0F2F5" }}/>
+                  ))}
+
+                  {/* vandaag lijn */}
+                  {(() => {
+                    for (let ci=0; ci<cols.length; ci++) {
+                      const {start,end} = cols[ci];
+                      if (today>=start && today<=end) {
+                        const frac=(today-start)/(end-start+86400000);
+                        return <div style={{ position:"absolute", left:ci*COL_W+frac*COL_W,
+                          top:0, bottom:0, width:2, background:"#E65100", zIndex:3, pointerEvents:"none" }}/>;
+                      }
+                    }
+                    return null;
+                  })()}
+
+                  {/* gantt balk */}
+                  {bar && (()=>{
+                    const left  = bar.startIdx*COL_W + bar.startFrac*COL_W;
+                    const right = (cols.length - bar.endIdx - 1)*COL_W + (1-bar.endFrac)*COL_W;
+                    const width = cols.length*COL_W - left - right;
+                    const isDragging = dragging?.pid === p.id;
+                    return (
+                      <div data-gantt-bar="1"
+                        onMouseDown={e=>{ e.stopPropagation(); startDrag(e, p); }}
+                        style={{ position:"absolute", left, width:Math.max(width,6),
+                          top:"50%", transform:"translateY(-50%)",
+                          height:ROW_H-6, borderRadius:4, zIndex:2,
+                          background:`linear-gradient(90deg,${color}ee,${color}bb)`,
+                          boxShadow:isDragging?`0 4px 16px ${color}99`:`0 2px 6px ${color}44`,
+                          display:"flex", alignItems:"center", overflow:"visible",
+                          cursor:"grab", opacity:isDragging?.9:1,
+                          outline:isDragging?`2px solid ${color}`:"none" }}
+                        title={`${p.name} · ${p.date} · ${wekenNum}w
+↔ Sleep balk om datum te wijzigen`}>
+                        {isDragging && (
+                          <span style={{ position:"absolute", top:-20, left:0, zIndex:20,
+                            background:"#1C2B3A", color:"#fff", fontSize:9, fontWeight:700,
+                            padding:"2px 7px", borderRadius:4, whiteSpace:"nowrap" }}>
+                            📅 {p.date}
+                          </span>
+                        )}
+                        {width>40 && (
+                          <span style={{ fontSize:9, color:"#fff", fontWeight:700,
+                            paddingLeft:6, whiteSpace:"nowrap", overflow:"hidden",
+                            textOverflow:"ellipsis", maxWidth:width-14, pointerEvents:"none" }}>
+                            {p.name.split(" ").slice(0,2).join(" ")}
+                          </span>
+                        )}
+                        <div style={{ position:"absolute",left:0,top:0,bottom:0,width:5,
+                          background:"rgba(255,255,255,.4)",borderRadius:"4px 0 0 4px" }}/>
+                        <div style={{ position:"absolute",right:0,top:0,bottom:0,width:5,
+                          background:"rgba(0,0,0,.15)",borderRadius:"0 4px 4px 0" }}/>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── LEGEND ── */}
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:14 }}>
+        {Object.entries(STATUS_META).filter(([k])=>k).map(([k,v]) => (
+          <span key={k} style={{ background:v.bg, color:v.text, border:`1px solid ${v.border}`,
+            padding:"2px 8px", borderRadius:4, fontSize:10, fontWeight:600 }}>{k}</span>
+        ))}
+      </div>
+
+      {/* ── AFGERONDE PROJECTEN ── */}
+      {openMonth === -1 && (
+        <div style={{ marginBottom:24 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+            <div style={{ background:"#2E7D32", color:"#fff", borderRadius:8,
+              padding:"5px 18px", fontWeight:800, fontSize:14 }}>✅ Afgeronde projecten</div>
+            <div style={{ background:"#E8F5E9", color:"#2E7D32", borderRadius:6,
+              padding:"2px 10px", fontSize:12, fontWeight:700 }}>
+              {afgerondProjects.length} project{afgerondProjects.length!==1?"en":""}
+            </div>
+            <div style={{ flex:1, height:2, background:"#F0F2F5" }}/>
+          </div>
+          {afgerondProjects.length === 0 ? (
+            <div style={{ fontSize:13, color:"#90A4AE", fontStyle:"italic", padding:16,
+              background:"#F5F7FA", borderRadius:8 }}>Nog geen afgeronde projecten.</div>
+          ) : (
+            <div style={{ overflowX:"auto", borderRadius:8, border:"1px solid #C8E6C9" }}>
+              <table style={{ borderCollapse:"collapse", width:"100%", minWidth:2200, fontSize:12 }}>
+                <thead>
+                  <tr style={{ background:"#2E7D32", color:"#fff", position:"sticky", top:0, zIndex:2 }}>
+                    <th style={{ ...TH, minWidth:200, textAlign:"left", padding:"10px 12px",
+                      position:"sticky", left:0, background:"#2E7D32", zIndex:3 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span>Project</span>
+                        <div style={{ display:"flex", alignItems:"center", gap:5,
+                          background:"rgba(255,255,255,.15)", borderRadius:5,
+                          padding:"2px 8px", fontSize:10, fontWeight:500 }}>
+                          <div style={{ width:14, height:14, borderRadius:3,
+                            border:"2px solid #fff", background:"#7CB342",
+                            display:"flex", alignItems:"center", justifyContent:"center",
+                            fontSize:10, color:"#fff", fontWeight:900 }}>✓</div>
+                          <span style={{ opacity:.9 }}>= klik om te heropenen</span>
+                        </div>
+                      </div>
+                    </th>
+                    {COLUMNS.map(c => <th key={c} style={{ ...TH, minWidth:88 }}>{c}</th>)}
+                    {canEdit && <th style={{ ...TH, width:48 }}>Del</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {afgerondProjects.map((p,ri) => <ProjectRow key={p.id} p={p} ri={ri} />)}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── ACTIEVE PROJECTEN PER MAAND ── */}
+      {openMonth !== -1 && (
+        <>
+          {monthsToShow.map(mi => (
+            <MonthTable key={mi} list={byMonth[mi]}
+              label={`${YEAR_MONTHS[mi]} 2026`} headerBg="#1C2B3A" />
+          ))}
+          {noDate.length > 0 && openMonth === null && (
+            <MonthTable list={noDate} label="Geen datum" headerBg="#78909C" />
+          )}
+        </>
+      )}
+
+      <div style={{ marginTop:8, fontSize:11, color:"#90A4AE" }}>
+        {activeProjects.length} actieve · {afgerondProjects.length} afgerond
+        {canEdit && " · Klik het vakje naast een project om het af te vinken"}
+      </div>
+    </div>
+  );
+}
+
+// ── JAARPLANNING ──────────────────────────────────────────────────────
+function Jaarplanning({ projects, setProjects, onProjectClick }) {
+  const [year,       setYear]       = useState(2026);
+  const [openMonth,  setOpenMonth]  = useState(null); // null = all, 0-11 = specific
+  const [editDate,   setEditDate]   = useState(null); // pid being date-edited
+
+  function parseDate(d="") {
+    // Try dd-mm-yyyy or d-m-yyyy
+    const full = d.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+    if (full) return { day:parseInt(full[1]), month:parseInt(full[2])-1, year:parseInt(full[3]) };
+    // Try dd-mm (assume current year)
+    const short = d.match(/^(\d{1,2})[-./](\d{1,2})$/);
+    if (short) return { day:parseInt(short[1]), month:parseInt(short[2])-1, year:2026 };
+    return null;
+  }
+
+  function projYear(p) {
+    const pd = parseDate(p.date);
+    return pd ? pd.year : 2026;
+  }
+
+  function projMonthIdx(p) {
+    const pd = parseDate(p.date);
+    if (!pd || pd.year !== year) return null;
+    return pd.month;
+  }
+
+  // Sort projects by date
+  function sortKey(p) {
+    const pd = parseDate(p.date);
+    if (!pd) return 99999;
+    return pd.year * 10000 + pd.month * 100 + pd.day;
+  }
+
+  const counts = Array(12).fill(0);
+  projects.forEach(p => {
+    const m = projMonthIdx(p);
+    if (m !== null && m >= 0 && m < 12) counts[m]++;
+  });
+  const maxC = Math.max(...counts, 1);
+
+  const byMonth = Array(12).fill(null).map(() => []);
+  [...projects].sort((a,b) => sortKey(a)-sortKey(b)).forEach(p => {
+    const m = projMonthIdx(p);
+    if (m !== null && m >= 0 && m < 12) byMonth[m].push(p);
+  });
+
+  async function updateDate(pid, newDate) {
+    const updated = projects.map(p => p.id===pid ? {...p, date:newDate} : p);
+    setProjects(updated);
+    await saveData("bouw_projects", updated);
+    setEditDate(null);
+  }
+
+  const monthsToShow = openMonth !== null ? [openMonth] : Array.from({length:12},(_,i)=>i);
+  const totalYear = projects.filter(p => projYear(p) === year).length;
+
+  return (
+    <div>
+      {/* header */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, flexWrap:"wrap" }}>
+        <Btn variant="ghost" style={{ padding:"6px 12px" }} onClick={()=>{ setYear(y=>y-1); setOpenMonth(null); }}>◀</Btn>
+        <h3 style={{ margin:0, fontSize:18, color:"#1C2B3A" }}>Jaarplanning {year}</h3>
+        <Btn variant="ghost" style={{ padding:"6px 12px" }} onClick={()=>{ setYear(y=>y+1); setOpenMonth(null); }}>▶</Btn>
+        <span style={{ fontSize:12, color:"#78909C", marginLeft:4 }}>{totalYear} projecten totaal</span>
+        {openMonth !== null && (
+          <Btn variant="ghost" style={{ padding:"5px 12px", fontSize:12 }}
+            onClick={()=>setOpenMonth(null)}>✕ Toon alle maanden</Btn>
+        )}
+      </div>
+
+      {/* clickable bar chart */}
+      <div style={{ background:"#fff", border:"1px solid #DDE3E9", borderRadius:10,
+        padding:"16px", marginBottom:24 }}>
+        <div style={{ fontSize:11, color:"#90A4AE", marginBottom:8, fontWeight:600 }}>
+          Klik op een maand om in te zoomen
+        </div>
+        <div style={{ display:"flex", gap:4, alignItems:"flex-end", height:90 }}>
+          {counts.map((c,i) => {
+            const isActive = openMonth === i;
+            const hasProj  = c > 0;
+            return (
+              <div key={i} onClick={()=> hasProj && setOpenMonth(openMonth===i ? null : i)}
+                style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center",
+                  gap:3, cursor:hasProj?"pointer":"default" }}>
+                <div style={{ fontSize:11, fontWeight:800,
+                  color: isActive ? "#E65100" : (hasProj ? "#1C2B3A" : "#BDBDBD") }}>
+                  {c||""}
+                </div>
+                <div style={{
+                  width:"100%",
+                  background: isActive ? "#E65100" : (hasProj ? "#FFAB76" : "#ECEFF1"),
+                  borderRadius:"4px 4px 0 0",
+                  height: Math.max((c/maxC)*64, c?6:0),
+                  transition:"all .2s",
+                  border: isActive ? "2px solid #BF360C" : "none",
+                  boxSizing:"border-box"
+                }}/>
+                <div style={{ fontSize:10, fontWeight: isActive?800:500,
+                  color: isActive?"#E65100":"#78909C" }}>
+                  {YEAR_MONTHS[i]}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* month sections */}
+      {monthsToShow.map(mi => {
+        const ps = byMonth[mi];
+        if (ps.length === 0) return null;
+        return (
+          <div key={mi} style={{ marginBottom:24 }}>
+            {/* month header */}
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+              <div style={{ background:"#1C2B3A", color:"#fff", borderRadius:8,
+                padding:"5px 18px", fontWeight:800, fontSize:14, letterSpacing:.5 }}>
+                {YEAR_MONTHS[mi]} {year}
+              </div>
+              <div style={{ background:"#FFF3E0", color:"#E65100", borderRadius:6,
+                padding:"3px 10px", fontSize:12, fontWeight:700 }}>
+                {ps.length} project{ps.length>1?"en":""}
+              </div>
+              {(() => {
+                const totaal = ps.reduce((sum, p) => sum + (Number(p.bedrag)||0), 0);
+                return totaal > 0 ? (
+                  <div style={{ background:"#E8F5E9", color:"#2E7D32", borderRadius:6,
+                    padding:"3px 10px", fontSize:12, fontWeight:700 }}>
+                    💶 € {totaal.toLocaleString("nl-NL")}
+                  </div>
+                ) : null;
+              })()}
+              <div style={{ flex:1, height:2, background:"#F0F2F5", borderRadius:1 }}/>
+            </div>
+
+            {/* project cards */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:10 }}>
+              {ps.map(p => (
+                <div key={p.id}
+                  onClick={()=>onProjectClick(p.id)}
+                  style={{ background:"#fff", borderRadius:10,
+                    border:"1px solid #DDE3E9", padding:"12px 14px",
+                    borderTop:"3px solid #E65100",
+                    boxShadow:"0 1px 4px rgba(0,0,0,.05)",
+                    cursor:"pointer", transition:"box-shadow .15s, transform .15s" }}
+                  onMouseEnter={e=>{ e.currentTarget.style.boxShadow="0 4px 16px rgba(230,81,0,.18)"; e.currentTarget.style.transform="translateY(-2px)"; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.05)"; e.currentTarget.style.transform="translateY(0)"; }}>
+
+                  {/* project name */}
+                  <div style={{ fontWeight:800, fontSize:13, color:"#1C2B3A", marginBottom:4 }}>
+                    📍 {p.name}
+                  </div>
+                  {p.type && (() => {
+                    const t = PROJECT_TYPES.find(t=>t.label===p.type);
+                    return t ? (
+                      <span style={{ display:"inline-block", fontSize:10, fontWeight:700,
+                        background:t.bg, color:t.text, border:`1px solid ${t.border}`,
+                        borderRadius:4, padding:"1px 7px", marginBottom:4 }}>
+                        🏗️ {t.label}
+                      </span>
+                    ) : null;
+                  })()}
+                  <div style={{ fontSize:10, color:"#E65100", fontWeight:600, marginBottom:4 }}>
+                    Klik om checklist te openen →
+                  </div>
+
+                  {/* startdatum — klikbaar om te bewerken */}
+                  {editDate === p.id ? (
+                    <div style={{ display:"flex", gap:4, alignItems:"center", marginBottom:6 }}>
+                      <input
+                        defaultValue={p.date}
+                        placeholder="dd-mm-yyyy"
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key==="Enter") updateDate(p.id, e.target.value);
+                          if (e.key==="Escape") setEditDate(null);
+                        }}
+                        onBlur={e => updateDate(p.id, e.target.value)}
+                        style={{ fontSize:12, padding:"4px 8px", borderRadius:5,
+                          border:"2px solid #E65100", outline:"none", width:120 }}
+                      />
+                      <span style={{ fontSize:10, color:"#90A4AE" }}>Enter = opslaan</span>
+                    </div>
+                  ) : (
+                    <div onClick={()=>setEditDate(p.id)}
+                      style={{ display:"inline-flex", alignItems:"center", gap:5,
+                        background:"#FFF3E0", borderRadius:5, padding:"3px 9px",
+                        cursor:"pointer", marginBottom:6, border:"1px solid #FFCC80" }}>
+                      <span style={{ fontSize:11, color:"#E65100", fontWeight:700 }}>📅 {p.date}</span>
+                      <span style={{ fontSize:10, color:"#FFAB76" }}>✏️</span>
+                    </div>
+                  )}
+
+                  {/* duur & oplevering */}
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:p.leider?6:0 }}>
+                    {p.duur && (
+                      <span style={{ fontSize:10, background:"#E3F2FD", color:"#1565C0",
+                        borderRadius:4, padding:"2px 7px", fontWeight:600 }}>⏱ {p.duur}</span>
+                    )}
+                    {p.oplevering && (
+                      <span style={{ fontSize:10, background:"#FFEBEE", color:"#B71C1C",
+                        borderRadius:4, padding:"2px 7px", fontWeight:600 }}>🚚 {p.oplevering}</span>
+                    )}
+                  </div>
+
+                  {/* team */}
+                  {(p.leider || p.collega) && (
+                    <div style={{ fontSize:11, color:"#546E7A", borderTop:"1px solid #F0F2F5",
+                      paddingTop:6, marginTop:4 }}>
+                      👷 {p.leider}{p.collega ? ` & ${p.collega}` : ""}
+                    </div>
+                  )}
+                  {p.bedrag && (
+                    <div style={{ fontSize:12, fontWeight:800, color:"#2E7D32", marginTop:4 }}>
+                      💶 € {Number(p.bedrag).toLocaleString("nl-NL")}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {monthsToShow.every(mi => byMonth[mi].length === 0) && (
+        <div style={{ textAlign:"center", color:"#90A4AE", fontSize:13, padding:40,
+          background:"#F5F7FA", borderRadius:10 }}>
+          <div style={{ fontSize:28, marginBottom:8 }}>📅</div>
+          Geen projecten gevonden voor {year}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── TIJDSCHEMA ────────────────────────────────────────────────────────
+const PROJ_COLORS = [
+  "#E65100","#1565C0","#6A1B9A","#2E7D32","#B71C1C",
+  "#0277BD","#558B2F","#4527A0","#AD1457","#00695C",
+  "#F57F17","#00838F","#6D4C41","#37474F","#C62828",
+  "#1B5E20","#4A148C","#BF360C","#006064","#37474F",
+];
+
+function Tijdschema({ projects, setProjects }) {
+  const today = new Date();
+
+  // View mode: day | week | month | year
+  const [viewMode, setViewMode] = useState("month");
+  // Anchor date — start of visible range
+  const [anchor, setAnchor] = useState(() => {
+    const d = new Date(today);
+    d.setDate(1);
+    return d;
+  });
+  const [editWeken,    setEditWeken]    = useState(null);
+  const [editNaam,     setEditNaam]     = useState(null);  // pid being name-edited
+  const [editLeider,   setEditLeider]   = useState(null);  // pid being leider-edited
+  const [filterType,   setFilterType]   = useState("");
+  const [search,       setSearch]       = useState("");
+  const [dragging,     setDragging]     = useState(null);  // { pid, startX, origDate }
+  const isDraggingBar  = useRef(false);
+  const timelineRef    = useRef(null);
+
+  // Scroll timeline to show today on load and viewMode change
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el) return;
+    // Find today's position in cols
+    const todayMs = today.getTime();
+    let todayX = 0;
+    for (let i = 0; i < cols.length; i++) {
+      const { start, end } = cols[i];
+      if (todayMs >= start.getTime() && todayMs <= end.getTime()) {
+        const frac = (todayMs - start.getTime()) / (end.getTime() - start.getTime() + 1);
+        todayX = i * COL_W + frac * COL_W;
+        break;
+      }
+    }
+    // Center today on screen
+    const centerOffset = el.clientWidth / 2;
+    el.scrollLeft = Math.max(0, todayX - centerOffset);
+  }, [viewMode, anchor]);
+
+  // ── Date helpers ────────────────────────────────────────────────────
+  function parseD(str = "") {
+    if (!str) return null;
+    const m = str.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+    if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+    const s = str.match(/^(\d{1,2})[-./](\d{1,2})$/);
+    if (s) return new Date(2026, parseInt(s[2]) - 1, parseInt(s[1]));
+    return null;
+  }
+  function getEndDate(p) {
+    const start = parseD(p.date);
+    if (!start) return null;
+    const defaultWeken = p.type === "Dakopbouw" ? 8 : p.type === "Dakkapel" ? 1 : 4;
+    const weken = parseInt(p.weken) || defaultWeken;
+    const end = new Date(start);
+    end.setDate(start.getDate() + weken * 7);
+    return end;
+  }
+  function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+  function startOfWeek(d) {
+    const r = new Date(d);
+    const day = r.getDay();
+    r.setDate(r.getDate() - ((day + 6) % 7));
+    return r;
+  }
+  function sameDay(a, b) { return a.toDateString() === b.toDateString(); }
+  function fmtDay(d) { return `${d.getDate()}-${d.getMonth()+1}`; }
+  function fmtFull(d) { return `${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}-${d.getFullYear()}`; }
+
+  // ── Build columns based on viewMode ─────────────────────────────────
+  function buildCols() {
+    if (viewMode === "day") {
+      // 60 days starting from anchor
+      return Array.from({length: 60}, (_, i) => {
+        const d = addDays(anchor, i);
+        return { label: fmtDay(d), subLabel: ["Zo","Ma","Di","Wo","Do","Vr","Za"][d.getDay()], start: d, end: d, isWeekend: d.getDay()===0||d.getDay()===6, isToday: sameDay(d, today) };
+      });
+    }
+    if (viewMode === "week") {
+      // 26 weeks starting from Monday of anchor week
+      const mon = startOfWeek(anchor);
+      return Array.from({length: 26}, (_, i) => {
+        const ws = addDays(mon, i * 7);
+        const we = addDays(ws, 6);
+        const wn = Math.ceil((((ws - new Date(ws.getFullYear(),0,1))/86400000)+1)/7);
+        return { label: `W${wn}`, subLabel: `${fmtDay(ws)}`, start: ws, end: we, isWeekend: false, isToday: today >= ws && today <= we };
+      });
+    }
+    if (viewMode === "month") {
+      // 24 months starting from anchor month
+      return Array.from({length: 24}, (_, i) => {
+        let m = anchor.getMonth() + i;
+        let y = anchor.getFullYear();
+        while (m > 11) { m -= 12; y++; }
+        const s = new Date(y, m, 1);
+        const e = new Date(y, m + 1, 0);
+        return { label: YEAR_MONTHS[m], subLabel: String(y), start: s, end: e, isWeekend: false, isToday: today.getMonth()===m && today.getFullYear()===y };
+      });
+    }
+    // year — show 4 years, each split into quarters
+    const startY = anchor.getFullYear();
+    const cols = [];
+    for (let y = startY; y < startY + 4; y++) {
+      for (let q = 0; q < 4; q++) {
+        const s = new Date(y, q * 3, 1);
+        const e = new Date(y, q * 3 + 3, 0);
+        cols.push({ label: `K${q+1}`, subLabel: String(y), start: s, end: e, isWeekend: false, isToday: today >= s && today <= e });
+      }
+    }
+    return cols;
+  }
+
+  const cols = buildCols();
+  const rangeStart = cols[0].start;
+  const rangeEnd   = cols[cols.length - 1].end;
+
+  // ── Navigate ─────────────────────────────────────────────────────────
+  function navigate(dir) {
+    const d = new Date(anchor);
+    const steps = { day: 30, week: 13, month: 12, year: 2 };
+    const n = steps[viewMode] * dir;
+    if (viewMode === "day")   d.setDate(d.getDate() + n);
+    if (viewMode === "week")  d.setDate(d.getDate() + n * 7);
+    if (viewMode === "month") d.setMonth(d.getMonth() + n);
+    if (viewMode === "year")  d.setFullYear(d.getFullYear() + n);
+    setAnchor(d);
+  }
+  function goToday() {
+    const d = new Date(today);
+    if (viewMode !== "day") d.setDate(1);
+    setAnchor(d);
+  }
+
+  // ── Filter projects ───────────────────────────────────────────────────
+  const visibleProjects = projects
+    .filter(p => !p.afgerond)
+    .filter(p => filterType ? p.type === filterType : true)
+    .filter(p => search ? p.name.toLowerCase().includes(search.toLowerCase()) : true)
+    .filter(p => {
+      const s = parseD(p.date);
+      const e = getEndDate(p);
+      if (!s || !e) return false;
+      return s <= rangeEnd && e >= rangeStart;
+    })
+    .sort((a, b) => {
+      const sa = parseD(a.date), sb = parseD(b.date);
+      return (sa || new Date(9999,0,1)) - (sb || new Date(9999,0,1));
+    });
+
+  // ── Bar position for a project within cols ────────────────────────────
+  function getBar(p) {
+    const pStart = parseD(p.date);
+    const pEnd   = getEndDate(p);
+    if (!pStart || !pEnd) return null;
+    let startIdx = -1, endIdx = -1;
+    let startFrac = 0, endFrac = 1;
+    for (let i = 0; i < cols.length; i++) {
+      const { start, end } = cols[i];
+      const colMs = end - start + 86400000;
+      if (pStart <= end && pEnd >= start) {
+        if (startIdx === -1) {
+          startIdx = i;
+          startFrac = pStart > start ? (pStart - start) / colMs : 0;
+        }
+        endIdx = i;
+        endFrac = pEnd < end ? (pEnd - start + 86400000) / colMs : 1;
+      }
+    }
+    return startIdx === -1 ? null : { startIdx, endIdx, startFrac, endFrac };
+  }
+
+  async function saveWeken(pid, val) {
+    const w = parseInt(val);
+    if (!w || w < 1) { setEditWeken(null); return; }
+    const updated = projects.map(p => p.id===pid ? {...p, weken: String(w)} : p);
+    setProjects(updated);
+    await saveData("bouw_projects", updated);
+    setEditWeken(null);
+  }
+
+  async function saveNaam(pid, val) {
+    if (!val.trim()) { setEditNaam(null); return; }
+    const updated = projects.map(p => p.id===pid ? {...p, name: val.trim()} : p);
+    setProjects(updated);
+    await saveData("bouw_projects", updated);
+    setEditNaam(null);
+  }
+
+  async function saveLeider(pid, val) {
+    const updated = projects.map(p => p.id===pid ? {...p, leider: val} : p);
+    setProjects(updated);
+    await saveData("bouw_projects", updated);
+    setEditLeider(null);
+  }
+
+  // Drag to reschedule — returns new date string after dragging dx pixels
+  function computeNewDate(origDateStr, dx) {
+    const orig = parseD(origDateStr);
+    if (!orig) return origDateStr;
+    // How many ms per pixel based on viewMode and COL_W
+    const msDayMap = { day: 86400000, week: 7*86400000, month: 30*86400000, year: 91*86400000 };
+    const msPerPx = (msDayMap[viewMode] || 30*86400000) / COL_W;
+    const newMs = orig.getTime() + dx * msPerPx;
+    const newD = new Date(newMs);
+    return `${String(newD.getDate()).padStart(2,"0")}-${String(newD.getMonth()+1).padStart(2,"0")}-${newD.getFullYear()}`;
+  }
+
+  function startDrag(e, p) {
+    e.stopPropagation();
+    e.preventDefault();
+    isDraggingBar.current = true;
+    const origDate = p.date;
+    const startX = e.clientX;
+    let lastDate = origDate;
+
+    function onMove(ev) {
+      const dx = ev.clientX - startX;
+      const newDate = computeNewDate(origDate, dx);
+      if (newDate !== lastDate) {
+        lastDate = newDate;
+        setDragging({ pid: p.id, newDate });
+        // Live preview — update state temporarily
+        setProjects(prev => prev.map(pr => pr.id===p.id ? {...pr, date: newDate, _dragging: true} : pr));
+      }
+    }
+
+    async function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      isDraggingBar.current = false;
+      setDragging(null);
+      // Save the final date
+      const finalDate = lastDate;
+      const updated = projects.map(pr => {
+        if (pr.id === p.id) {
+          const { _dragging, ...rest } = {...pr, date: finalDate};
+          return rest;
+        }
+        return pr;
+      });
+      setProjects(updated);
+      await saveData("bouw_projects", updated);
+    }
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }
+
+  const COL_W = viewMode === "day" ? 38 : viewMode === "week" ? 52 : viewMode === "month" ? 58 : 56;
+  const ROW_H    = 32;  // row height — same on left and right
+  const HEADER_H = 22;  // each header row height
+  const NAME_W = 190;
+  const dayNames = ["Zo","Ma","Di","Wo","Do","Vr","Za"];
+
+  // group cols by year/month for header spanning
+  function buildHeaderGroups() {
+    if (viewMode === "day") {
+      const groups = {};
+      cols.forEach((c,i) => {
+        const key = `${c.start.getFullYear()}-${c.start.getMonth()}`;
+        if (!groups[key]) groups[key] = { label: `${YEAR_MONTHS[c.start.getMonth()]} ${c.start.getFullYear()}`, count: 0 };
+        groups[key].count++;
+      });
+      return Object.values(groups);
+    }
+    if (viewMode === "week") {
+      const groups = {};
+      cols.forEach(c => {
+        const key = `${c.start.getFullYear()}-${c.start.getMonth()}`;
+        if (!groups[key]) groups[key] = { label: `${YEAR_MONTHS[c.start.getMonth()]} ${c.start.getFullYear()}`, count: 0 };
+        groups[key].count++;
+      });
+      return Object.values(groups);
+    }
+    if (viewMode === "month") {
+      const groups = {};
+      cols.forEach(c => {
+        const key = c.subLabel;
+        if (!groups[key]) groups[key] = { label: c.subLabel, count: 0 };
+        groups[key].count++;
+      });
+      return Object.values(groups);
+    }
+    // year — group by year
+    const groups = {};
+    cols.forEach(c => {
+      const key = c.subLabel;
+      if (!groups[key]) groups[key] = { label: key, count: 0 };
+      groups[key].count++;
+    });
+    return Object.values(groups);
+  }
+
+  const headerGroups = buildHeaderGroups();
+  const totalWidth = NAME_W + cols.length * COL_W;
+
+  // ── Overlap detectie ─────────────────────────────────────────────────
+  const overlapSet = new Set();
+  for (let i = 0; i < visibleProjects.length; i++) {
+    for (let j = i+1; j < visibleProjects.length; j++) {
+      const a = visibleProjects[i], b = visibleProjects[j];
+      const as = parseD(a.date), ae = getEndDate(a);
+      const bs = parseD(b.date), be = getEndDate(b);
+      if (as && ae && bs && be && as < be && bs < ae) {
+        overlapSet.add(a.id);
+        overlapSet.add(b.id);
+      }
+    }
+  }
+
+  return (
+    <div style={{ fontFamily:"'Inter',sans-serif" }}>
+
+      {/* ── MAAND SNELKEUZE ── */}
+      <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:10 }}>
+        {[2026,2027].map(y => (
+          <div key={y} style={{ display:"flex", gap:3, alignItems:"center" }}>
+            <span style={{ fontSize:11, fontWeight:700, color:"#90A4AE", marginRight:2 }}>{y}</span>
+            {YEAR_MONTHS.map((m, mi) => {
+              const d = new Date(y, mi, 1);
+              const isActive = anchor.getMonth()===mi && anchor.getFullYear()===y && viewMode==="month";
+              const isNow = today.getMonth()===mi && today.getFullYear()===y;
+              const cnt = projects.filter(p=>{ const pd=parseD(p.date); return pd && pd.getMonth()===mi && pd.getFullYear()===y && !p.afgerond; }).length;
+              return (
+                <button key={m} onClick={()=>{ setViewMode("month"); setAnchor(new Date(y,mi,1)); }}
+                  style={{ padding:"3px 7px", borderRadius:5, border:"none",
+                    cursor:"pointer", fontSize:11, fontWeight:isActive?800:500,
+                    background: isActive?"#E65100": isNow?"#FFF3E0":"#F0F2F5",
+                    color: isActive?"#fff": isNow?"#E65100":"#546E7A",
+                    position:"relative", minWidth:28 }}>
+                  {m}
+                  {cnt>0 && <span style={{ position:"absolute", top:-4, right:-3,
+                    background: isActive?"#fff":"#E65100", color: isActive?"#E65100":"#fff",
+                    borderRadius:10, fontSize:8, fontWeight:900, padding:"0 3px",
+                    lineHeight:"14px", minWidth:14, textAlign:"center" }}>{cnt}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* ── CONTROLS ── */}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center", marginBottom:12 }}>
+
+        {/* View mode */}
+        <div style={{ display:"flex", background:"#F0F2F5", borderRadius:8, padding:3 }}>
+          {[["day","Dag"],["week","Week"],["month","Maand"],["year","Jaar"]].map(([k,l]) => (
+            <button key={k} onClick={()=>{ setViewMode(k); }}
+              style={{ background:viewMode===k?"#1C2B3A":"transparent",
+                color:viewMode===k?"#fff":"#546E7A",
+                border:"none", borderRadius:6, padding:"6px 14px",
+                cursor:"pointer", fontSize:12, fontWeight:viewMode===k?700:500,
+                transition:"all .15s" }}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {/* Navigate */}
+        <button onClick={()=>navigate(-1)}
+          style={{ background:"#1C2B3A", color:"#fff", border:"none",
+            borderRadius:6, padding:"7px 14px", cursor:"pointer", fontWeight:700, fontSize:14 }}>◀</button>
+        <button onClick={goToday}
+          style={{ background:"#FFF3E0", color:"#E65100", border:"1px solid #FFCC80",
+            borderRadius:6, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700 }}>
+          Vandaag
+        </button>
+        <button onClick={()=>navigate(1)}
+          style={{ background:"#1C2B3A", color:"#fff", border:"none",
+            borderRadius:6, padding:"7px 14px", cursor:"pointer", fontWeight:700, fontSize:14 }}>▶</button>
+
+        {/* Range label */}
+        <span style={{ fontWeight:800, fontSize:14, color:"#1C2B3A", minWidth:180 }}>
+          {viewMode==="day"   && `${fmtDay(cols[0].start)} – ${fmtDay(cols[cols.length-1].end)}`}
+          {viewMode==="week"  && `${fmtDay(cols[0].start)} – ${fmtDay(cols[cols.length-1].end)}`}
+          {viewMode==="month" && `${YEAR_MONTHS[cols[0].start.getMonth()]} – ${YEAR_MONTHS[cols[cols.length-1].start.getMonth()]} ${cols[cols.length-1].start.getFullYear()}`}
+          {viewMode==="year"  && `${cols[0].subLabel} – ${cols[cols.length-1].subLabel}`}
+        </span>
+
+        {/* Filters */}
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="🔍 Zoek project…"
+          style={{ padding:"6px 10px", borderRadius:6, border:"1px solid #CFD8DC",
+            fontSize:12, width:160, outline:"none" }} />
+        <select value={filterType} onChange={e=>setFilterType(e.target.value)}
+          style={{ padding:"6px 10px", borderRadius:6, border:"1px solid #CFD8DC",
+            fontSize:12, background:"#fff" }}>
+          <option value="">Alle types</option>
+          {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
+        </select>
+
+        <span style={{ fontSize:12, color:"#78909C", marginLeft:4 }}>
+          {visibleProjects.length} project{visibleProjects.length!==1?"en":""}
+          {overlapSet.size>0 && (
+            <span style={{ marginLeft:8, background:"#FFEBEE", color:"#B71C1C",
+              border:"1px solid #EF9A9A", borderRadius:4, padding:"1px 7px",
+              fontSize:11, fontWeight:700 }}>
+              ⚠️ {overlapSet.size/2|0} overlappingen
+            </span>
+          )}
+        </span>
+      </div>
+
       {/* ── GANTT — split layout: sticky names + scrollable timeline ── */}
       <div style={{ display:"flex", borderRadius:10, border:"1px solid #DDE3E9",
         boxShadow:"0 2px 12px rgba(0,0,0,.07)", background:"#fff", overflow:"hidden" }}>
