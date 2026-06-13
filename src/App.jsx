@@ -1076,6 +1076,7 @@ function TeamEditInline({ p, onSave, onClose }) {
 
             <>
                 <OndRow col="Graafwerk" aan={actief["Graafwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Graafwerk"]:!(actief["Graafwerk"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="graaf_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Grond afvoeren" k="graaf_afvoer" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   {(ond["graaf_afvoer"]||"") === "Ja" && (
                     <OField label="Hoeveelheid" k="graaf_m3" placeholder="bv. 12" type="number" unit="m³" ond={ond} ondSet={ondSet} />
@@ -1089,14 +1090,17 @@ function TeamEditInline({ p, onSave, onClose }) {
                   <OSelect label="Achtergevel verwijderen" k="staal_achtergevel" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Binnenmuur dragend" k="staal_binnen_dragend" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Buitenmuur dragend" k="staal_buiten_dragend" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
+                  <OSelect label="Ja / Nee" k="staal_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="staal_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Constructie berekening" aan={actief["Constructie berekening"]!==false} onToggle={()=>setActief(a=>({...a,["Constructie berekening"]:!(actief["Constructie berekening"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="constructie_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="constructie_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Steen-strips / Metselwerk" aan={actief["Steen-strips / Metselwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Steen-strips / Metselwerk"]:!(actief["Steen-strips / Metselwerk"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="steen_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Keuze" k="steen_type" options={["Steen-strips","Metselwerk"]} ond={ond} ondSet={ondSet} />
                   <OField label="Oppervlakte" k="steen_m2" placeholder="bv. 24" type="number" unit="m²" ond={ond} ondSet={ondSet} />
                   <OField label="Steencode" k="steen_code" placeholder="bv. WF-8203" ond={ond} ondSet={ondSet} />
@@ -1104,6 +1108,7 @@ function TeamEditInline({ p, onSave, onClose }) {
                 </OndRow>
 
                 <OndRow col="Kozijn" aan={actief["Kozijn"]!==false} onToggle={()=>setActief(a=>({...a,["Kozijn"]:!(actief["Kozijn"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="kozijn_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Materiaal" k="kozijn_materiaal" options={["Kunststof","Hout","Aluminium"]} ond={ond} ondSet={ondSet} />
                   <OField label="Kleurcode binnen" k="kozijn_kleur_binnen" placeholder="bv. RAL 9010" ond={ond} ondSet={ondSet} />
                   <OField label="Kleurcode buiten" k="kozijn_kleur_buiten" placeholder="bv. RAL 7016" ond={ond} ondSet={ondSet} />
@@ -1113,11 +1118,13 @@ function TeamEditInline({ p, onSave, onClose }) {
                 </OndRow>
 
                 <OndRow col="Lichtstraat" aan={actief["Lichtstraat"]!==false} onToggle={()=>setActief(a=>({...a,["Lichtstraat"]:!(actief["Lichtstraat"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="licht_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OField label="Maat" k="lichtstraat_maat" placeholder="bv. 60x120 cm"  ond={ond} ondSet={ondSet} />
                   <ONote k="lichtstraat_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Heiwerk" aan={actief["Heiwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Heiwerk"]:!(actief["Heiwerk"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="hei_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OField label="Aantal palen" k="hei_palen" placeholder="bv. 12" type="number" unit="palen" ond={ond} ondSet={ondSet} />
                   <OField label="Diepte palen" k="hei_diepte" placeholder="bv. 8" type="number" unit="meter" ond={ond} ondSet={ondSet} />
                   <OSelect label="Toegang via" k="hei_toegang" options={["Achterom / tuinhek","Binnen door de woning"]} ond={ond} ondSet={ondSet} />
@@ -1131,6 +1138,7 @@ function TeamEditInline({ p, onSave, onClose }) {
                 </OndRow>
 
                 <OndRow col="Fundering" aan={actief["Fundering"]!==false} onToggle={()=>setActief(a=>({...a,["Fundering"]:!(actief["Fundering"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="fund_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Type" k="fund_type" options={["Fundering op staal","Broodjesvloer"]}  ond={ond} ondSet={ondSet} />
                   <OField label="Beton m³" k="fund_beton" placeholder="bv. 4.5" type="number" unit="m³"  ond={ond} ondSet={ondSet} />
                   <ONote k="fund_notitie" ond={ond} ondSet={ondSet} />
@@ -1145,10 +1153,12 @@ function TeamEditInline({ p, onSave, onClose }) {
                   <OSelect label="Zonnescherm stroom" k="el_zonnescherm" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Nieuwe meterkast" k="el_meterkast" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Zonnepanelen" k="el_zonnepanelen" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
+                  <OSelect label="Ja / Nee" k="electra_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="electra_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Verwarming" aan={actief["Verwarming"]!==false} onToggle={()=>setActief(a=>({...a,["Verwarming"]:!(actief["Verwarming"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="verw_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Type" k="verw_type" options={["Radiator","Vloerverwarming aanbouw","Vloerverwarming aanbouw + woonkamer","Airco"]}  ond={ond} ondSet={ondSet} />
                   {(ond["verw_type"]||"").includes("Radiator") && (
                     <OField label="Aantal" k="verw_radiator_aantal" placeholder="bv. 3" type="number" unit="stuks"  ond={ond} ondSet={ondSet} />
@@ -1161,42 +1171,51 @@ function TeamEditInline({ p, onSave, onClose }) {
 
                 <OndRow col="Dakbedekking" aan={actief["Dakbedekking"]!==false} onToggle={()=>setActief(a=>({...a,["Dakbedekking"]:!(actief["Dakbedekking"]!==false)}))}>
                   <OSelect label="Type" k="dak_type" options={["EPDM","Bitumen"]}  ond={ond} ondSet={ondSet} />
+                  <OSelect label="Ja / Nee" k="dak_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="dak_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Hijsen" aan={actief["Hijsen"]!==false} onToggle={()=>setActief(a=>({...a,["Hijsen"]:!(actief["Hijsen"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="hijsen_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="hijsen_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Tegelwerk" aan={actief["Tegelwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Tegelwerk"]:!(actief["Tegelwerk"]!==false)}))}>
                   <OField label="Opp. m²" k="tegel_m2" placeholder="bv. 18" type="number" unit="m²"  ond={ond} ondSet={ondSet} />
+                  <OSelect label="Ja / Nee" k="tegel_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="tegel_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Stucwerk" aan={actief["Stucwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Stucwerk"]:!(actief["Stucwerk"]!==false)}))}>
                   <OField label="Opp. m²" k="stuc_m2" placeholder="bv. 30" type="number" unit="m²"  ond={ond} ondSet={ondSet} />
+                  <OSelect label="Ja / Nee" k="stuc_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="stuc_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Loodgieter" aan={actief["Loodgieter"]!==false} onToggle={()=>setActief(a=>({...a,["Loodgieter"]:!(actief["Loodgieter"]!==false)}))}>
                   <OSelect label="Buitenkraan" k="lood_buitenkraan" options={["Ja","Nee"]}  ond={ond} ondSet={ondSet} />
+                  <OSelect label="Ja / Nee" k="lood_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="lood_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Container" aan={actief["Container"]!==false} onToggle={()=>setActief(a=>({...a,["Container"]:!(actief["Container"]!==false)}))}>
                   <OField label="Aantal" k="cont_aantal" placeholder="bv. 2" type="number" unit="stuks"  ond={ond} ondSet={ondSet} />
+                  <OSelect label="Ja / Nee" k="cont_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="cont_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Steigers" aan={actief["Steigers"]!==false} onToggle={()=>setActief(a=>({...a,["Steigers"]:!(actief["Steigers"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="steigers_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="steigers_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Trap" aan={actief["Trap"]!==false} onToggle={()=>setActief(a=>({...a,["Trap"]:!(actief["Trap"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="trap_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="trap_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Extra" aan={actief["Extra"]!==false} onToggle={()=>setActief(a=>({...a,["Extra"]:!(actief["Extra"]!==false)}))}>
+                  <OSelect label="Ja / Nee" k="extra_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="extra_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
             </>
