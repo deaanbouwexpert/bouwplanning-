@@ -1469,10 +1469,9 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
     await addLog({ type:"project_remove", project: proj?.name });
   }
 
-  const activeProjects   = projects.filter(p => !p.afgerond);
   const afgerondProjects = projects.filter(p =>  p.afgerond);
 
-  const sorted = [...activeProjects].sort((a,b) => sortKey(a)-sortKey(b));
+  const sorted = [...projects].sort((a,b) => sortKey(a)-sortKey(b));
   const byMonth = Array(12).fill(null).map(() => []);
   const noDate  = [];
   sorted.forEach(p => {
@@ -1491,7 +1490,7 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
   }
 
   const counts = byMonth.map(ps => ps.length);
-  const maxC   = Math.max(...counts, afgerondProjects.length, 1);
+  const maxC   = Math.max(...counts, 1);
   const monthsToShow = openMonth !== null && openMonth >= 0
     ? [openMonth]
     : Array.from({length:12}, (_,i) => i);
@@ -1961,13 +1960,37 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
           </button>
         )}
         {canEdit && <Btn onClick={()=>setNewProj(v=>!v)} style={{ whiteSpace:"nowrap" }}>+ Nieuw project</Btn>}
+
+        {/* KPI afgerond */}
+        <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
+          <div style={{ background:"#E8F5E9", border:"1px solid #A5D6A7", borderRadius:8,
+            padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:20 }}>✅</span>
+            <div>
+              <div style={{ fontSize:18, fontWeight:900, color:"#2E7D32", lineHeight:1 }}>
+                {afgerondProjects.length}
+              </div>
+              <div style={{ fontSize:10, color:"#66BB6A", fontWeight:600 }}>Afgerond</div>
+            </div>
+          </div>
+          <div style={{ background:"#E3F2FD", border:"1px solid #90CAF9", borderRadius:8,
+            padding:"6px 14px", display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:20 }}>🏗️</span>
+            <div>
+              <div style={{ fontSize:18, fontWeight:900, color:"#1565C0", lineHeight:1 }}>
+                {projects.filter(p=>!p.afgerond).length}
+              </div>
+              <div style={{ fontSize:10, color:"#42A5F5", fontWeight:600 }}>Actief</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── KLIKBARE MAAND BARCHART ── */}
       <div style={{ background:"#fff", border:"1px solid #DDE3E9", borderRadius:10,
         padding:"14px 16px", marginBottom:16 }}>
         <div style={{ fontSize:11, color:"#90A4AE", marginBottom:8, fontWeight:600 }}>
-          Klik op een maand om te filteren · Klik "Klaar" voor afgeronde projecten
+          Klik op een maand om te filteren
         </div>
         <div style={{ display:"flex", gap:3, alignItems:"flex-end", height:80 }}>
           {counts.map((c,i) => {
@@ -1988,23 +2011,6 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
               </div>
             );
           })}
-          {/* Afgerond kolom */}
-          <div onClick={()=>setOpenMonth(openMonth===-1?null:-1)}
-            style={{ flex:1, display:"flex", flexDirection:"column",
-              alignItems:"center", gap:2, cursor:"pointer" }}>
-            <div style={{ fontSize:10, fontWeight:800,
-              color:openMonth===-1?"#2E7D32":(afgerondProjects.length>0?"#2E7D32":"#BDBDBD") }}>
-              {afgerondProjects.length||""}
-            </div>
-            <div style={{ width:"100%", borderRadius:"3px 3px 0 0",
-              background:openMonth===-1?"#2E7D32":(afgerondProjects.length>0?"#A5D6A7":"#ECEFF1"),
-              border:openMonth===-1?"2px solid #1B5E20":"none",
-              boxSizing:"border-box",
-              height:Math.max((afgerondProjects.length/maxC)*52,afgerondProjects.length?5:0),
-              transition:"all .2s" }}/>
-            <div style={{ fontSize:9, fontWeight:openMonth===-1?800:500,
-              color:openMonth===-1?"#2E7D32":"#78909C", textAlign:"center" }}>✅ Klaar</div>
-          </div>
         </div>
       </div>
 
@@ -2032,53 +2038,7 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
         ))}
       </div>
 
-      {/* ── AFGERONDE PROJECTEN ── */}
-      {openMonth === -1 && (
-        <div style={{ marginBottom:24 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-            <div style={{ background:"#2E7D32", color:"#fff", borderRadius:8,
-              padding:"5px 18px", fontWeight:800, fontSize:14 }}>✅ Afgeronde projecten</div>
-            <div style={{ background:"#E8F5E9", color:"#2E7D32", borderRadius:6,
-              padding:"2px 10px", fontSize:12, fontWeight:700 }}>
-              {afgerondProjects.length} project{afgerondProjects.length!==1?"en":""}
-            </div>
-            <div style={{ flex:1, height:2, background:"#F0F2F5" }}/>
-          </div>
-          {afgerondProjects.length === 0 ? (
-            <div style={{ fontSize:13, color:"#90A4AE", fontStyle:"italic", padding:16,
-              background:"#F5F7FA", borderRadius:8 }}>Nog geen afgeronde projecten.</div>
-          ) : (
-            <div style={{ overflowX:"auto", borderRadius:8, border:"1px solid #C8E6C9" }}>
-              <table style={{ borderCollapse:"collapse", width:"100%", minWidth:2200, fontSize:12 }}>
-                <thead>
-                  <tr style={{ background:"#2E7D32", color:"#fff", position:"sticky", top:0, zIndex:2 }}>
-                    <th style={{ ...TH, minWidth:200, textAlign:"left", padding:"10px 12px",
-                      position:"sticky", left:0, background:"#2E7D32", zIndex:3 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <span>Project</span>
-                        <div style={{ display:"flex", alignItems:"center", gap:5,
-                          background:"rgba(255,255,255,.15)", borderRadius:5,
-                          padding:"2px 8px", fontSize:10, fontWeight:500 }}>
-                          <div style={{ width:14, height:14, borderRadius:3,
-                            border:"2px solid #fff", background:"#7CB342",
-                            display:"flex", alignItems:"center", justifyContent:"center",
-                            fontSize:10, color:"#fff", fontWeight:900 }}>✓</div>
-                          <span style={{ opacity:.9 }}>= klik om te heropenen</span>
-                        </div>
-                      </div>
-                    </th>
-                    {COLUMNS.map(c => <th key={c} style={{ ...TH, minWidth:88 }}>{c}</th>)}
-                    {canEdit && <th style={{ ...TH, width:48 }}>Del</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {afgerondProjects.map((p,ri) => <ProjectRow key={p.id} p={p} ri={ri} />)}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+
 
       {/* ── ACTIEVE PROJECTEN PER MAAND ── */}
       {openMonth !== -1 && (
@@ -2094,7 +2054,7 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
       )}
 
       <div style={{ marginTop:8, fontSize:11, color:"#90A4AE" }}>
-        {activeProjects.length} actieve · {afgerondProjects.length} afgerond
+        {projects.filter(p=>!p.afgerond).length} actieve · {afgerondProjects.length} afgerond
         {canEdit && " · Klik het vakje naast een project om het af te vinken"}
       </div>
     </div>
