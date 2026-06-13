@@ -2533,11 +2533,54 @@ function Tijdschema({ projects, setProjects }) {
   const headerGroups = buildHeaderGroups();
   const totalWidth = NAME_W + cols.length * COL_W;
 
+  // ── Overlap detectie ─────────────────────────────────────────────────
+  const overlapSet = new Set();
+  for (let i = 0; i < visibleProjects.length; i++) {
+    for (let j = i+1; j < visibleProjects.length; j++) {
+      const a = visibleProjects[i], b = visibleProjects[j];
+      const as = parseD(a.date), ae = getEndDate(a);
+      const bs = parseD(b.date), be = getEndDate(b);
+      if (as && ae && bs && be && as < be && bs < ae) {
+        overlapSet.add(a.id);
+        overlapSet.add(b.id);
+      }
+    }
+  }
+
   return (
     <div style={{ fontFamily:"'Inter',sans-serif" }}>
 
+      {/* ── MAAND SNELKEUZE ── */}
+      <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:10 }}>
+        {[2026,2027].map(y => (
+          <div key={y} style={{ display:"flex", gap:3, alignItems:"center" }}>
+            <span style={{ fontSize:11, fontWeight:700, color:"#90A4AE", marginRight:2 }}>{y}</span>
+            {YEAR_MONTHS.map((m, mi) => {
+              const d = new Date(y, mi, 1);
+              const isActive = anchor.getMonth()===mi && anchor.getFullYear()===y && viewMode==="month";
+              const isNow = today.getMonth()===mi && today.getFullYear()===y;
+              const cnt = projects.filter(p=>{ const pd=parseD(p.date); return pd && pd.getMonth()===mi && pd.getFullYear()===y && !p.afgerond; }).length;
+              return (
+                <button key={m} onClick={()=>{ setViewMode("month"); setAnchor(new Date(y,mi,1)); }}
+                  style={{ padding:"3px 7px", borderRadius:5, border:"none",
+                    cursor:"pointer", fontSize:11, fontWeight:isActive?800:500,
+                    background: isActive?"#E65100": isNow?"#FFF3E0":"#F0F2F5",
+                    color: isActive?"#fff": isNow?"#E65100":"#546E7A",
+                    position:"relative", minWidth:28 }}>
+                  {m}
+                  {cnt>0 && <span style={{ position:"absolute", top:-4, right:-3,
+                    background: isActive?"#fff":"#E65100", color: isActive?"#E65100":"#fff",
+                    borderRadius:10, fontSize:8, fontWeight:900, padding:"0 3px",
+                    lineHeight:"14px", minWidth:14, textAlign:"center" }}>{cnt}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
       {/* ── CONTROLS ── */}
-      <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center", marginBottom:16 }}>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center", marginBottom:12 }}>
 
         {/* View mode */}
         <div style={{ display:"flex", background:"#F0F2F5", borderRadius:8, padding:3 }}>
@@ -2588,6 +2631,13 @@ function Tijdschema({ projects, setProjects }) {
 
         <span style={{ fontSize:12, color:"#78909C", marginLeft:4 }}>
           {visibleProjects.length} project{visibleProjects.length!==1?"en":""}
+          {overlapSet.size>0 && (
+            <span style={{ marginLeft:8, background:"#FFEBEE", color:"#B71C1C",
+              border:"1px solid #EF9A9A", borderRadius:4, padding:"1px 7px",
+              fontSize:11, fontWeight:700 }}>
+              ⚠️ {overlapSet.size/2|0} overlappingen
+            </span>
+          )}
         </span>
       </div>
 
@@ -2652,14 +2702,18 @@ function Tijdschema({ projects, setProjects }) {
             const bar   = getBar(p);
             const color = PROJ_COLORS[pi % PROJ_COLORS.length];
             const typeInfo = PROJECT_TYPES.find(t=>t.label===p.type);
+            const hasOverlap = overlapSet.has(p.id);
+            const defaultWeken = p.type === "Dakopbouw" ? 8 : p.type === "Dakkapel" ? 1 : 4;
+            const wekenNum = parseInt(p.weken) || defaultWeken;
 
             return (
               <div key={p.id}
                 style={{ display:"flex", alignItems:"stretch", minHeight:ROW_H,
-                  background: pi%2===0?"#FAFBFC":"#fff",
-                  borderBottom:"none" }}
-                onMouseEnter={e=>e.currentTarget.style.background="#EBF3FF"}
-                onMouseLeave={e=>e.currentTarget.style.background=pi%2===0?"#FAFBFC":"#fff"}>
+                  background: hasOverlap ? "#FFF5F5" : pi%2===0?"#FAFBFC":"#fff",
+                  borderBottom: hasOverlap ? "1px solid #FFCDD2" : "none",
+                  borderLeft: hasOverlap ? "3px solid #E53935" : "none" }}
+                onMouseEnter={e=>e.currentTarget.style.background=hasOverlap?"#FFEBEE":"#EBF3FF"}
+                onMouseLeave={e=>e.currentTarget.style.background=hasOverlap?"#FFF5F5":pi%2===0?"#FAFBFC":"#fff"}>
 
                 {/* project name cell */}
                 <div style={{ width:NAME_W, minWidth:NAME_W, flexShrink:0,
@@ -2692,18 +2746,22 @@ function Tijdschema({ projects, setProjects }) {
                       )}
                       {/* weken badge / edit */}
                       {editWeken===p.id ? (
-                        <input defaultValue={p.weken||"4"} autoFocus type="number" min="1" max="52"
+                        <input defaultValue={wekenNum} autoFocus type="number" min="1" max="52"
                           style={{ width:38, fontSize:10, padding:"1px 4px", borderRadius:3,
                             border:"1px solid #E65100", outline:"none", textAlign:"center" }}
                           onKeyDown={e=>{ if(e.key==="Enter") saveWeken(p.id,e.target.value); if(e.key==="Escape") setEditWeken(null); }}
                           onBlur={e=>saveWeken(p.id,e.target.value)} />
                       ) : (
                         <span onClick={()=>setEditWeken(p.id)}
-                          style={{ fontSize:9, color:"#fff", background: color,
-                            borderRadius:3, padding:"1px 5px", cursor:"pointer",
-                            fontWeight:700 }}>
-                          {p.weken||"4"}w
+                          title="Klik om weken aan te passen"
+                          style={{ fontSize:9, color:"#fff",
+                            background: p.type==="Dakopbouw"?"#6A1B9A": p.type==="Dakkapel"?"#2E7D32":color,
+                            borderRadius:3, padding:"1px 5px", cursor:"pointer", fontWeight:700 }}>
+                          {wekenNum}w
                         </span>
+                      )}
+                      {hasOverlap && (
+                        <span style={{ fontSize:9, color:"#B71C1C", fontWeight:800 }}>⚠️</span>
                       )}
                       {(p.leider||p.collega) && (
                         <span style={{ fontSize:9, color:"#546E7A", whiteSpace:"nowrap",
@@ -2774,10 +2832,20 @@ function Tijdschema({ projects, setProjects }) {
             border:"2px solid rgba(230,81,0,.4)", borderRadius:2 }}/> Vandaag
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+          <div style={{ width:16, height:12, background:"#FFF5F5",
+            border:"1px solid #FFCDD2", borderRadius:2, borderLeft:"3px solid #E53935" }}/> Overlapping
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+          <span style={{ background:"#6A1B9A", color:"#fff", borderRadius:3,
+            padding:"1px 5px", fontSize:9, fontWeight:700 }}>8w</span>
+          Dakopbouw (8 weken)
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
           <span style={{ background:"#E65100", color:"#fff", borderRadius:3,
             padding:"1px 5px", fontSize:9, fontWeight:700 }}>4w</span>
-          Klik weken-badge om looptijd aan te passen
+          Klik badge om weken aan te passen
         </div>
+      </div>
         {PROJECT_TYPES.map(t => (
           <div key={t.label} style={{ display:"flex", alignItems:"center", gap:4 }}>
             <div style={{ width:12, height:12, background:t.bg, border:`1px solid ${t.border}`,
