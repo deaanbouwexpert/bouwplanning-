@@ -2345,6 +2345,7 @@ function Tijdschema({ projects, setProjects }) {
   const [editWeken,    setEditWeken]    = useState(null);
   const [editNaam,     setEditNaam]     = useState(null);  // pid being name-edited
   const [editLeider,   setEditLeider]   = useState(null);  // pid being leider-edited
+  const [editCollega,  setEditCollega]  = useState(null);  // pid being collega-edited
   const [filterType,   setFilterType]   = useState("");
   const [search,       setSearch]       = useState("");
   const [dragging,     setDragging]     = useState(null);  // { pid, startX, origDate }
@@ -2524,6 +2525,13 @@ function Tijdschema({ projects, setProjects }) {
     setProjects(updated);
     await saveData("bouw_projects", updated);
     setEditLeider(null);
+  }
+
+  async function saveCollega(pid, val) {
+    const updated = projects.map(p => p.id===pid ? {...p, collega: val} : p);
+    setProjects(updated);
+    await saveData("bouw_projects", updated);
+    setEditCollega(null);
   }
 
   // Drag to reschedule — returns new date string after dragging dx pixels
@@ -2889,10 +2897,31 @@ function Tijdschema({ projects, setProjects }) {
                         </select>
                       ) : (
                         <span onClick={e=>{ e.stopPropagation(); setEditLeider(p.id); }}
-                          style={{ fontSize:9, color:p.leider?"#546E7A":"#BDBDBD",
+                          title="Klik om projectleider te wijzigen"
+                          style={{ fontSize:9, color:p.leider?"#1565C0":"#BDBDBD",
+                            fontWeight:p.leider?600:400,
                             cursor:"pointer", whiteSpace:"nowrap", overflow:"hidden",
                             textOverflow:"ellipsis", maxWidth:78 }}>
                           {p.leider ? `👷 ${p.leider}` : "+ leider"}
+                        </span>
+                      )}
+                      {editCollega===p.id ? (
+                        <select autoFocus value={p.collega||""}
+                          onChange={e=>saveCollega(p.id,e.target.value)}
+                          onBlur={()=>setEditCollega(null)}
+                          style={{ fontSize:9, borderRadius:3, border:"1px solid #A5D6A7",
+                            padding:"1px 3px", background:"#fff", maxWidth:85 }}>
+                          <option value="">— geen —</option>
+                          {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
+                        </select>
+                      ) : (
+                        <span onClick={e=>{ e.stopPropagation(); setEditCollega(p.id); }}
+                          title="Klik om collega te wijzigen"
+                          style={{ fontSize:9, color:p.collega?"#2E7D32":"#BDBDBD",
+                            fontWeight:p.collega?600:400,
+                            cursor:"pointer", whiteSpace:"nowrap", overflow:"hidden",
+                            textOverflow:"ellipsis", maxWidth:78 }}>
+                          {p.collega ? `👷 ${p.collega}` : "+ collega"}
                         </span>
                       )}
                     </div>
@@ -3306,6 +3335,7 @@ function Tijdschema({ projects, setProjects }) {
   const [editWeken,    setEditWeken]    = useState(null);
   const [editNaam,     setEditNaam]     = useState(null);  // pid being name-edited
   const [editLeider,   setEditLeider]   = useState(null);  // pid being leider-edited
+  const [editCollega,  setEditCollega]  = useState(null);  // pid being collega-edited
   const [filterType,   setFilterType]   = useState("");
   const [search,       setSearch]       = useState("");
   const [dragging,     setDragging]     = useState(null);  // { pid, startX, origDate }
@@ -3485,6 +3515,13 @@ function Tijdschema({ projects, setProjects }) {
     setProjects(updated);
     await saveData("bouw_projects", updated);
     setEditLeider(null);
+  }
+
+  async function saveCollega(pid, val) {
+    const updated = projects.map(p => p.id===pid ? {...p, collega: val} : p);
+    setProjects(updated);
+    await saveData("bouw_projects", updated);
+    setEditCollega(null);
   }
 
   // Drag to reschedule — returns new date string after dragging dx pixels
@@ -3783,10 +3820,29 @@ function Tijdschema({ projects, setProjects }) {
                     ) : (
                       <span onClick={e=>{ e.stopPropagation(); setEditLeider(p.id); }}
                         title="Klik om projectleider te wijzigen"
-                        style={{ fontSize:9, color: p.leider?"#546E7A":"#BDBDBD",
+                        style={{ fontSize:9, color: p.leider?"#1565C0":"#BDBDBD",
                           cursor:"pointer", whiteSpace:"nowrap", overflow:"hidden",
-                          textOverflow:"ellipsis", maxWidth:80 }}>
+                          textOverflow:"ellipsis", maxWidth:80, fontWeight: p.leider?600:400 }}>
                         {p.leider ? `👷 ${p.leider}` : "+ leider"}
+                      </span>
+                    )}
+                    {/* collega */}
+                    {editCollega===p.id ? (
+                      <select autoFocus value={p.collega||""}
+                        onChange={e=>saveCollega(p.id,e.target.value)}
+                        onBlur={()=>setEditCollega(null)}
+                        style={{ fontSize:9, borderRadius:3, border:"1px solid #A5D6A7",
+                          padding:"1px 3px", background:"#fff", maxWidth:90 }}>
+                        <option value="">— geen —</option>
+                        {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
+                      </select>
+                    ) : (
+                      <span onClick={e=>{ e.stopPropagation(); setEditCollega(p.id); }}
+                        title="Klik om collega te wijzigen"
+                        style={{ fontSize:9, color: p.collega?"#2E7D32":"#BDBDBD",
+                          cursor:"pointer", whiteSpace:"nowrap", overflow:"hidden",
+                          textOverflow:"ellipsis", maxWidth:80, fontWeight: p.collega?600:400 }}>
+                        {p.collega ? `👷 ${p.collega}` : "+ collega"}
                       </span>
                     )}
                   </div>
