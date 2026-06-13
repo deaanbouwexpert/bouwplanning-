@@ -768,6 +768,175 @@ function ONote({ k, ond, ondSet }) {
   );
 }
 
+// ── PDF WERKBON GENERATOR ────────────────────────────────────────────
+function drukWerkbon(p) {
+  const ond = p.ond || {};
+  const actief = p.actief || {};
+
+  function rij(label, waarde) {
+    if (!waarde) return "";
+    return `<tr><td style="padding:5px 10px;font-weight:600;color:#546E7A;width:180px;vertical-align:top;font-size:12px">${label}</td><td style="padding:5px 10px;font-size:12px;color:#1C2B3A">${waarde}</td></tr>`;
+  }
+
+  function sectie(titel, rijen) {
+    const inhoud = rijen.filter(Boolean).join("");
+    if (!inhoud) return "";
+    return `
+      <div style="margin-bottom:18px;page-break-inside:avoid">
+        <div style="background:#1C2B3A;color:#fff;padding:7px 12px;font-size:13px;font-weight:700;border-radius:4px 4px 0 0">${titel}</div>
+        <table style="width:100%;border-collapse:collapse;border:1px solid #DDE3E9;border-top:none;border-radius:0 0 4px 4px;background:#fff">
+          ${inhoud}
+        </table>
+      </div>`;
+  }
+
+  const kolommen = COLUMNS.filter(k => actief[k] !== false);
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>Werkbon – ${p.name}</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #1C2B3A; }
+  @media print { body { padding: 0; } .no-print { display:none; } }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .header { background: #1C2B3A; color: #fff; padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:flex-start; }
+  .logo { font-size: 22px; font-weight: 900; color: #FF6D00; }
+  tr:nth-child(even) td { background: #F8FAFB; }
+</style>
+</head><body>
+
+<div class="no-print" style="margin-bottom:16px">
+  <button onclick="window.print()" style="background:#E65100;color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Afdrukken / Opslaan als PDF</button>
+  <button onclick="window.close()" style="margin-left:10px;background:#F5F7FA;color:#546E7A;border:1px solid #DDE3E9;padding:10px 20px;border-radius:6px;font-size:14px;cursor:pointer">✕ Sluiten</button>
+</div>
+
+<div class="header">
+  <div>
+    <div class="logo">De Aanbouw Expert</div>
+    <h1>${p.name}</h1>
+    <div style="font-size:13px;opacity:.85;margin-top:4px">
+      Type: ${p.type||"—"} &nbsp;|&nbsp; Startdatum: ${p.date||"—"} &nbsp;|&nbsp; Weken: ${p.weken||"—"}
+    </div>
+  </div>
+  <div style="text-align:right;font-size:12px;opacity:.75">
+    Werkbon gegenereerd: ${new Date().toLocaleDateString("nl-NL")}<br>
+    ${p.leider ? "Projectleider: " + p.leider : ""}${p.collega ? " &amp; " + p.collega : ""}
+  </div>
+</div>
+
+${kolommen.includes("Graafwerk") ? sectie("🚜 Graafwerk", [
+  rij("Grond afvoeren", ond.graaf_afvoer),
+  rij("Hoeveelheid grond", ond.graaf_m3 ? ond.graaf_m3 + " m³" : ""),
+  rij("Tuintegels opnemen", ond.graaf_tegels),
+  rij("Schutting weghalen", ond.graaf_schutting),
+  rij("Notitie", ond.graaf_notitie),
+]) : ""}
+
+${kolommen.includes("Staal") ? sectie("⚙️ Staal", [
+  rij("Achtergevel verwijderen", ond.staal_achtergevel),
+  rij("Binnenmuur dragend", ond.staal_binnen_dragend),
+  rij("Buitenmuur dragend", ond.staal_buiten_dragend),
+  rij("Notitie", ond.staal_notitie),
+]) : ""}
+
+${kolommen.includes("Constructie berekening") ? sectie("📐 Constructie berekening", [
+  rij("Notitie", ond.constructie_notitie),
+]) : ""}
+
+${kolommen.includes("Steen-strips / Metselwerk") ? sectie("🧱 Steen-strips / Metselwerk", [
+  rij("Type", ond.steen_type),
+  rij("Notitie", ond.steen_notitie),
+]) : ""}
+
+${kolommen.includes("Kozijn") ? sectie("🪟 Kozijn", [
+  rij("Materiaal", ond.kozijn_materiaal),
+  rij("Notitie", ond.kozijn_notitie),
+]) : ""}
+
+${kolommen.includes("Lichtstraat") ? sectie("💡 Lichtstraat", [
+  rij("Maat", ond.lichtstraat_maat),
+  rij("Notitie", ond.lichtstraat_notitie),
+]) : ""}
+
+${kolommen.includes("Heiwerk") ? sectie("🔨 Heiwerk", [
+  rij("Aantal palen", ond.hei_palen ? ond.hei_palen + " palen" : ""),
+  rij("Notitie", ond.hei_notitie),
+]) : ""}
+
+${kolommen.includes("Fundering") ? sectie("🏛️ Fundering", [
+  rij("Type", ond.fund_type),
+  rij("Beton bestellen", ond.fund_beton ? ond.fund_beton + " m³" : ""),
+  rij("Notitie", ond.fund_notitie),
+]) : ""}
+
+${kolommen.includes("Electra") ? sectie("⚡ Electra", [
+  rij("Stopcontacten", ond.el_stopcontacten ? ond.el_stopcontacten + " stuks" : ""),
+  rij("Spotjes binnen", ond.el_spotjes_binnen ? ond.el_spotjes_binnen + " stuks" : ""),
+  rij("Spotjes buiten", ond.el_spotjes_buiten ? ond.el_spotjes_buiten + " stuks" : ""),
+  rij("Lichtpunten binnen", ond.el_licht_binnen ? ond.el_licht_binnen + " stuks" : ""),
+  rij("Lichtpunten buiten", ond.el_licht_buiten ? ond.el_licht_buiten + " stuks" : ""),
+  rij("Stroom zonnescherm", ond.el_zonnescherm),
+  rij("Nieuwe meterkast", ond.el_meterkast),
+  rij("Zonnepanelen", ond.el_zonnepanelen),
+  rij("Notitie", ond.electra_notitie),
+]) : ""}
+
+${kolommen.includes("Verwarming") ? sectie("🌡️ Verwarming", [
+  rij("Type", ond.verw_type),
+  rij("Aantal radiatoren", ond.verw_radiator_aantal ? ond.verw_radiator_aantal + " stuks" : ""),
+  rij("Oppervlakte", ond.verw_m2 ? ond.verw_m2 + " m²" : ""),
+  rij("Notitie", ond.verw_notitie),
+]) : ""}
+
+${kolommen.includes("Dakbedekking") ? sectie("🏠 Dakbedekking", [
+  rij("Type", ond.dak_type),
+  rij("Notitie", ond.dak_notitie),
+]) : ""}
+
+${kolommen.includes("Tegelwerk") ? sectie("🔲 Tegelwerk", [
+  rij("Oppervlakte", ond.tegel_m2 ? ond.tegel_m2 + " m²" : ""),
+  rij("Notitie", ond.tegel_notitie),
+]) : ""}
+
+${kolommen.includes("Stucwerk") ? sectie("🪣 Stucwerk", [
+  rij("Oppervlakte", ond.stuc_m2 ? ond.stuc_m2 + " m²" : ""),
+  rij("Notitie", ond.stuc_notitie),
+]) : ""}
+
+${kolommen.includes("Loodgieter") ? sectie("🔧 Loodgieter", [
+  rij("Buitenkraan", ond.lood_buitenkraan),
+  rij("Notitie", ond.lood_notitie),
+]) : ""}
+
+${kolommen.includes("Container") ? sectie("📦 Container", [
+  rij("Aantal", ond.cont_aantal ? ond.cont_aantal + " stuks" : ""),
+  rij("Notitie", ond.cont_notitie),
+]) : ""}
+
+${kolommen.includes("Steigers") ? sectie("🏗️ Steigers", [
+  rij("Notitie", ond.steigers_notitie),
+]) : ""}
+
+${kolommen.includes("Trap") ? sectie("🪜 Trap", [
+  rij("Notitie", ond.trap_notitie),
+]) : ""}
+
+${kolommen.includes("Extra") ? sectie("➕ Extra", [
+  rij("Notitie", ond.extra_notitie),
+]) : ""}
+
+${p.klantNaam ? sectie("👤 Klantgegevens", [
+  rij("Naam", p.klantNaam),
+  rij("Telefoon", p.klantTel),
+]) : ""}
+
+</body></html>`;
+
+  const win = window.open("", "_blank");
+  win.document.write(html);
+  win.document.close();
+}
+
 // ── TEAM EDIT INLINE (in ProjectRow) ─────────────────────────────────
 function TeamEditInline({ p, onSave, onClose }) {
   const [naam,        setNaam]       = useState(p.name||"");
@@ -907,6 +1076,9 @@ function TeamEditInline({ p, onSave, onClose }) {
                 </OndRow>
 
                 <OndRow col="Staal" aan={actief["Staal"]!==false} onToggle={()=>setActief(a=>({...a,["Staal"]:!(actief["Staal"]!==false)}))}>
+                  <OSelect label="Achtergevel verwijderen" k="staal_achtergevel" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
+                  <OSelect label="Binnenmuur dragend" k="staal_binnen_dragend" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
+                  <OSelect label="Buitenmuur dragend" k="staal_buiten_dragend" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="staal_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
@@ -941,6 +1113,14 @@ function TeamEditInline({ p, onSave, onClose }) {
                 </OndRow>
 
                 <OndRow col="Electra" aan={actief["Electra"]!==false} onToggle={()=>setActief(a=>({...a,["Electra"]:!(actief["Electra"]!==false)}))}>
+                  <OField label="Stopcontacten" k="el_stopcontacten" placeholder="bv. 6" type="number" unit="stuks" ond={ond} ondSet={ondSet} />
+                  <OField label="Spotjes binnen" k="el_spotjes_binnen" placeholder="bv. 8" type="number" unit="stuks" ond={ond} ondSet={ondSet} />
+                  <OField label="Spotjes buiten" k="el_spotjes_buiten" placeholder="bv. 2" type="number" unit="stuks" ond={ond} ondSet={ondSet} />
+                  <OField label="Lichtpunten binnen" k="el_licht_binnen" placeholder="bv. 3" type="number" unit="stuks" ond={ond} ondSet={ondSet} />
+                  <OField label="Lichtpunten buiten" k="el_licht_buiten" placeholder="bv. 2" type="number" unit="stuks" ond={ond} ondSet={ondSet} />
+                  <OSelect label="Zonnescherm stroom" k="el_zonnescherm" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
+                  <OSelect label="Nieuwe meterkast" k="el_meterkast" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
+                  <OSelect label="Zonnepanelen" k="el_zonnepanelen" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <ONote k="electra_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
@@ -1022,7 +1202,7 @@ function TeamEditInline({ p, onSave, onClose }) {
           </div>
         </>}
 
-        {/* Opslaan */}
+        {/* Opslaan + PDF */}
         <div style={{ display:"flex", gap:6, marginTop:4 }}>
           <button onClick={save} disabled={saving||saved}
             style={{ flex:1, fontSize:12, fontWeight:800, border:"none", borderRadius:5, padding:"9px",
@@ -1031,6 +1211,9 @@ function TeamEditInline({ p, onSave, onClose }) {
               color:"#fff", transition:"background .2s" }}>
             {saved ? "✓ Opgeslagen!" : saving ? "Opslaan..." : "✓ Opslaan"}
           </button>
+          <button onClick={()=>drukWerkbon({...p, ond, actief, leider, collega, weken, date:startdatum, type, klantNaam, klantTel})}
+            style={{ fontSize:11, background:"#1C2B3A", color:"#fff", border:"none",
+              borderRadius:5, padding:"9px 12px", cursor:"pointer", fontWeight:700 }}>🖨️ PDF</button>
           <button onClick={onClose}
             style={{ fontSize:11, background:"#F5F7FA", color:"#546E7A", border:"1px solid #DDE3E9",
               borderRadius:5, padding:"9px 12px", cursor:"pointer" }}>✕</button>
@@ -1520,9 +1703,24 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                       if (ond.graaf_schutting) infos.push("Schutting: " + ond.graaf_schutting);
                       if (ond.graaf_notitie)   infos.push(ond.graaf_notitie);
                     }
-                    if (col === "Staal"                     && ond.staal_notitie)      infos.push(ond.staal_notitie);
+                    if (col === "Staal") {
+                      if (ond.staal_achtergevel)    infos.push("Achtergevel: " + ond.staal_achtergevel);
+                      if (ond.staal_binnen_dragend) infos.push("Binnenmuur dragend: " + ond.staal_binnen_dragend);
+                      if (ond.staal_buiten_dragend) infos.push("Buitenmuur dragend: " + ond.staal_buiten_dragend);
+                      if (ond.staal_notitie)        infos.push(ond.staal_notitie);
+                    }
                     if (col === "Constructie berekening"    && ond.constructie_notitie) infos.push(ond.constructie_notitie);
-                    if (col === "Electra"                   && ond.electra_notitie)    infos.push(ond.electra_notitie);
+                    if (col === "Electra") {
+                      if (ond.el_stopcontacten)  infos.push(ond.el_stopcontacten + "x stopcontact");
+                      if (ond.el_spotjes_binnen) infos.push(ond.el_spotjes_binnen + "x spot binnen");
+                      if (ond.el_spotjes_buiten) infos.push(ond.el_spotjes_buiten + "x spot buiten");
+                      if (ond.el_licht_binnen)   infos.push(ond.el_licht_binnen + "x licht binnen");
+                      if (ond.el_licht_buiten)   infos.push(ond.el_licht_buiten + "x licht buiten");
+                      if (ond.el_zonnescherm)    infos.push("Zonnescherm: " + ond.el_zonnescherm);
+                      if (ond.el_meterkast)      infos.push("Meterkast: " + ond.el_meterkast);
+                      if (ond.el_zonnepanelen)   infos.push("Zonnepanelen: " + ond.el_zonnepanelen);
+                      if (ond.electra_notitie)   infos.push(ond.electra_notitie);
+                    }
                     if (col === "Hijsen"                    && ond.hijsen_notitie)     infos.push(ond.hijsen_notitie);
                     if (col === "Steigers"                  && ond.steigers_notitie)   infos.push(ond.steigers_notitie);
                     if (col === "Trap"                      && ond.trap_notitie)       infos.push(ond.trap_notitie);
