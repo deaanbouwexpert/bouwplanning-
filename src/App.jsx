@@ -2342,7 +2342,6 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
   const [editTeamTs, setEditTeamTs] = useState(null); // pid for TeamEditInline popup
   const scrollRef = useRef(null);
   const ganttRef  = useRef(null);
-  const dragRef   = useRef({ active:false });
 
   function parseD(s="") {
     const m = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
@@ -2448,28 +2447,7 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
   }
 
 
-  // Drag bar to reschedule
-  function startDrag(e,p){
-    e.stopPropagation(); e.preventDefault();
-    dragRef.current.active=true;
-    const orig=parseD(p.date); const sx=e.clientX;
-    const msPerPx=(cols[0].end-cols[0].start+86400000)/COL_W;
-    function mv(ev){
-      const dx=ev.clientX-sx;
-      const newD=new Date(orig.getTime()+dx*msPerPx);
-      const ds=`${String(newD.getDate()).padStart(2,"0")}-${String(newD.getMonth()+1).padStart(2,"0")}-${newD.getFullYear()}`;
-      setProjects(prev=>prev.map(pr=>pr.id===p.id?{...pr,date:ds}:pr));
-    }
-    async function up(){
-      dragRef.current.active=false;
-      document.removeEventListener("mousemove",mv);
-      document.removeEventListener("mouseup",up);
-      const cur=projects.find(pr=>pr.id===p.id);
-      if(cur){ const u=projects.map(pr=>pr.id===p.id?cur:pr); await saveData("bouw_projects",u); }
-    }
-    document.addEventListener("mousemove",mv);
-    document.addEventListener("mouseup",up);
-  }
+
 
   // Filtered projects
   const allProjects = projects
@@ -2600,8 +2578,6 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
         style={{overflowX:"scroll",background:"#fff",
           cursor:"grab",userSelect:"none"}}
         onMouseDown={e=>{
-          if(dragRef.current.active) return;
-          if(e.target.closest&&e.target.closest("[data-bar]")) return;
           const el=scrollRef.current; const sx=e.pageX; const sl=el.scrollLeft;
           e.preventDefault();
           function mv(ev){el.scrollLeft=sl-(ev.pageX-sx); el.style.cursor="grabbing";}
@@ -2736,10 +2712,10 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
                     const l=bar.si*COL_W+bar.sf*COL_W;
                     const w=totalW-l-((cols.length-bar.ei-1)*COL_W+(1-bar.ef)*COL_W);
                     return (
-                      <div data-bar="1" onMouseDown={e=>startDrag(e,p)}
+                      <div
                         style={{position:"absolute",left:l,width:Math.max(w,6),
                           top:"50%",transform:"translateY(-50%)",height:ROW_H-10,
-                          borderRadius:4,zIndex:2,cursor:"grab",
+                          borderRadius:4,zIndex:2,cursor:"default",
                           background:`linear-gradient(90deg,${color}ee,${color}99)`,
                           boxShadow:`0 2px 6px ${color}44`,
                           display:"flex",alignItems:"center",overflow:"hidden"}}
@@ -2766,7 +2742,7 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
       {/* Legenda */}
       <div style={{marginTop:10,display:"flex",gap:14,flexWrap:"wrap",fontSize:11,color:"#78909C",alignItems:"center"}}>
         <span>← Sleep tijdlijn</span>
-        <span>↔ Sleep balk = datum verplaatsen</span>
+
         <div style={{width:14,height:10,background:"rgba(230,81,0,.15)",border:"2px solid rgba(230,81,0,.4)",borderRadius:2}}/> <span>Vandaag</span>
         <div style={{width:14,height:10,background:"#FFF5F5",border:"1px solid #FFCDD2",borderRadius:2,borderLeft:"3px solid #E53935"}}/> <span>Overlapping</span>
         <span style={{background:"#E65100",color:"#fff",borderRadius:3,padding:"1px 5px",fontSize:9,fontWeight:700}}>4w</span> <span>klik = weken wijzigen</span>
