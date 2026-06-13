@@ -2833,7 +2833,7 @@ function Tijdschema({ projects, setProjects }) {
             const wekenNum = parseInt(p.weken)||defaultWeken;
 
             return (
-              <div key={p.id} style={{ display:"flex", height:ROW_H,
+              <div key={p.id} style={{ display:"flex", minHeight:ROW_H,
                 background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
                 borderBottom:"1px solid #F0F2F5" }}
                 onMouseEnter={e=>e.currentTarget.style.background=hasOverlap?"#FFEBEE":"#EBF3FF"}
@@ -2845,9 +2845,9 @@ function Tijdschema({ projects, setProjects }) {
                   background: hasOverlap?"#FFF5F5": pi%2===0?"#FAFBFC":"#fff",
                   borderRight:"3px solid #DDE3E9",
                   borderLeft:"3px solid "+color,
-                  padding:"4px 6px", display:"flex", alignItems:"flex-start",
+                  padding:"5px 7px", display:"flex", alignItems:"flex-start",
                   boxSizing:"border-box" }}>
-                  <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", gap:3 }}>
                     {/* naam */}
                     {editNaam===p.id ? (
                       <input autoFocus defaultValue={p.name}
@@ -2863,7 +2863,7 @@ function Tijdschema({ projects, setProjects }) {
                       </div>
                     )}
                     {/* rij 1: type + weken + overlap */}
-                    <div style={{ display:"flex", gap:3, alignItems:"center", marginTop:1 }}>
+                    <div style={{ display:"flex", gap:3, alignItems:"center" }}>
                       {typeInfo && (
                         <span style={{ fontSize:8, fontWeight:700, flexShrink:0,
                           background:typeInfo.bg, color:typeInfo.text,
@@ -2888,7 +2888,7 @@ function Tijdschema({ projects, setProjects }) {
                       {hasOverlap && <span style={{ fontSize:9, color:"#B71C1C", fontWeight:800 }}>⚠️</span>}
                     </div>
                     {/* rij 2: leider + collega */}
-                    <div style={{ display:"flex", gap:4, alignItems:"center", marginTop:2, flexWrap:"wrap" }}>
+                    <div style={{ display:"flex", gap:4, alignItems:"center", flexWrap:"wrap" }}>
                       {editLeider===p.id ? (
                         <select autoFocus value={p.leider||""}
                           onChange={e=>saveLeider(p.id,e.target.value)}
@@ -2937,7 +2937,7 @@ function Tijdschema({ projects, setProjects }) {
 
                 {/* TIJDLIJN CEL */}
                 <div style={{ position:"relative", flex:1,
-                  minWidth: cols.length * COL_W }}>
+                  minWidth: cols.length * COL_W, minHeight:ROW_H }}>
 
                   {/* kolom achtergronden */}
                   {cols.map((c,ci) => (
