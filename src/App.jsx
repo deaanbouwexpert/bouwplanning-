@@ -2341,6 +2341,7 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
   const [editNaam,   setEditNaam]   = useState(null);
   const [editTeamTs, setEditTeamTs] = useState(null); // pid for TeamEditInline popup
   const scrollRef = useRef(null);
+  const ganttRef  = useRef(null);
   const dragRef   = useRef({ active:false });
 
   function parseD(s="") {
@@ -2501,7 +2502,23 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
               const isActive=anchor.getMonth()===mi&&anchor.getFullYear()===y&&viewMode==="month";
               const cnt=allProjects.filter(p=>{const d=parseD(p.date);return d&&d.getMonth()===mi&&d.getFullYear()===y;}).length;
               return (
-                <button key={m} onClick={()=>{setViewMode("month");setAnchor(new Date(y,mi,1));}}
+                <button key={m} onClick={()=>{
+                  setViewMode("month");
+                  setAnchor(new Date(y,mi,1));
+                  // Scroll gantt vertically to first project of this month
+                  setTimeout(()=>{
+                    const el = ganttRef.current;
+                    if (!el) return;
+                    const firstIdx = allProjects.findIndex(p=>{
+                      const d=parseD(p.date);
+                      return d && d.getMonth()===mi && d.getFullYear()===y;
+                    });
+                    if (firstIdx >= 0) {
+                      const headerH = 44 + 2; // two header rows
+                      el.scrollTop = firstIdx * ROW_H;
+                    }
+                  }, 50);
+                }}
                   style={{padding:"2px 6px",borderRadius:4,border:"none",cursor:"pointer",
                     fontSize:10,fontWeight:isActive?800:500,position:"relative",
                     background:isActive?"#E65100":isNow?"#FFF3E0":"#F0F2F5",
@@ -2741,6 +2758,7 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
         </div>
       </div>
 
+      </div>
       {/* Legenda */}
       <div style={{marginTop:10,display:"flex",gap:14,flexWrap:"wrap",fontSize:11,color:"#78909C",alignItems:"center"}}>
         <span>← Sleep tijdlijn</span>
