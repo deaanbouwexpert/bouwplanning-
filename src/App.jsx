@@ -894,7 +894,7 @@ ${kolommen.includes("Electra") ? sectie("⚡ Electra", [
   rij("Spotjes buiten", ond.el_spotjes_buiten ? ond.el_spotjes_buiten + " stuks" : ""),
   rij("Lichtpunten binnen", ond.el_licht_binnen ? ond.el_licht_binnen + " stuks" : ""),
   rij("Lichtpunten buiten", ond.el_licht_buiten ? ond.el_licht_buiten + " stuks" : ""),
-  rij("Stroom zonnescherm", ond.el_zonnescherm),
+  rij("Zonnescherm", ond.el_zonnescherm),
   rij("Nieuwe meterkast", ond.el_meterkast),
   rij("Zonnepanelen", ond.el_zonnepanelen),
   rij("Notitie", ond.electra_notitie),
@@ -927,13 +927,18 @@ ${kolommen.includes("Tegelwerk") ? sectie("🔲 Tegelwerk", [
 
 ${kolommen.includes("Stucwerk") ? sectie("🪣 Stucwerk", [
   rij("Ja / Nee", ond.stuc_jn),
-  rij("Oppervlakte", ond.stuc_m2 ? ond.stuc_m2 + " m²" : ""),
+  rij("Locatie", ond.stuc_locatie),
+  rij("m² aanbouw", ond.stuc_m2_aanbouw ? ond.stuc_m2_aanbouw + " m²" : ""),
+  rij("m² woonkamer", ond.stuc_m2_woonkamer ? ond.stuc_m2_woonkamer + " m²" : ""),
   rij("Notitie", ond.stuc_notitie),
 ]) : ""}
 
 ${kolommen.includes("Loodgieter") ? sectie("🔧 Loodgieter", [
   rij("Ja / Nee", ond.lood_jn),
   rij("Buitenkraan", ond.lood_buitenkraan),
+  rij("Positie buitenkraan", ond.lood_buitenkraan_positie),
+  rij("HWA materiaal", ond.lood_hwa_materiaal),
+  rij("HWA kant", ond.lood_hwa_kant),
   rij("Notitie", ond.lood_notitie),
 ]) : ""}
 
@@ -1173,7 +1178,7 @@ function TeamEditInline({ p, onSave, onClose }) {
                   <OField label="Spotjes buiten" k="el_spotjes_buiten" placeholder="bv. 2" type="number" unit="stuks" ond={ond} ondSet={ondSet} />
                   <OField label="Lichtpunten binnen" k="el_licht_binnen" placeholder="bv. 3" type="number" unit="stuks" ond={ond} ondSet={ondSet} />
                   <OField label="Lichtpunten buiten" k="el_licht_buiten" placeholder="bv. 2" type="number" unit="stuks" ond={ond} ondSet={ondSet} />
-                  <OSelect label="Zonnescherm stroom" k="el_zonnescherm" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
+                  <OSelect label="Zonnescherm" k="el_zonnescherm" options={["Verwijderen","Hergebruiken"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Nieuwe meterkast" k="el_meterkast" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Zonnepanelen" k="el_zonnepanelen" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
                   <OSelect label="Ja / Nee" k="electra_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
@@ -1210,14 +1215,25 @@ function TeamEditInline({ p, onSave, onClose }) {
                 </OndRow>
 
                 <OndRow col="Stucwerk" aan={actief["Stucwerk"]!==false} onToggle={()=>setActief(a=>({...a,["Stucwerk"]:!(actief["Stucwerk"]!==false)}))}>
-                  <OField label="Opp. m²" k="stuc_m2" placeholder="bv. 30" type="number" unit="m²"  ond={ond} ondSet={ondSet} />
                   <OSelect label="Ja / Nee" k="stuc_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
+                  <OSelect label="Locatie" k="stuc_locatie" options={["Alleen aanbouw","Alleen bestaand woonkamer","Aanbouw + woonkamer"]} ond={ond} ondSet={ondSet} />
+                  {(ond["stuc_locatie"]||"").includes("aanbouw") || (ond["stuc_locatie"]||"") === "Aanbouw + woonkamer" ? (
+                    <OField label="m² aanbouw" k="stuc_m2_aanbouw" placeholder="bv. 18" type="number" unit="m²" ond={ond} ondSet={ondSet} />
+                  ) : null}
+                  {(ond["stuc_locatie"]||"").includes("woonkamer") ? (
+                    <OField label="m² woonkamer" k="stuc_m2_woonkamer" placeholder="bv. 30" type="number" unit="m²" ond={ond} ondSet={ondSet} />
+                  ) : null}
                   <ONote k="stuc_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
                 <OndRow col="Loodgieter" aan={actief["Loodgieter"]!==false} onToggle={()=>setActief(a=>({...a,["Loodgieter"]:!(actief["Loodgieter"]!==false)}))}>
-                  <OSelect label="Buitenkraan" k="lood_buitenkraan" options={["Ja","Nee"]}  ond={ond} ondSet={ondSet} />
                   <OSelect label="Ja / Nee" k="lood_jn" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
+                  <OSelect label="Buitenkraan" k="lood_buitenkraan" options={["Ja","Nee"]} ond={ond} ondSet={ondSet} />
+                  {(ond["lood_buitenkraan"]||"") === "Ja" && (
+                    <OSelect label="Positie kraan" k="lood_buitenkraan_positie" options={["Links van aanbouw","Rechts van aanbouw"]} ond={ond} ondSet={ondSet} />
+                  )}
+                  <OSelect label="HWA materiaal" k="lood_hwa_materiaal" options={["Zink","PVC"]} ond={ond} ondSet={ondSet} />
+                  <OSelect label="HWA kant" k="lood_hwa_kant" options={["Links","Rechts","Beide kanten"]} ond={ond} ondSet={ondSet} />
                   <ONote k="lood_notitie" ond={ond} ondSet={ondSet} />
                 </OndRow>
 
@@ -1761,11 +1777,16 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                       if (ond.tegel_notitie) infos.push(ond.tegel_notitie);
                     }
                     if (col === "Stucwerk") {
-                      if (ond.stuc_m2)    infos.push(ond.stuc_m2 + " m²");
-                      if (ond.stuc_notitie) infos.push(ond.stuc_notitie);
+                      if (ond.stuc_locatie)       infos.push(ond.stuc_locatie);
+                      if (ond.stuc_m2_aanbouw)    infos.push("Aanbouw: " + ond.stuc_m2_aanbouw + " m²");
+                      if (ond.stuc_m2_woonkamer)  infos.push("Woonkamer: " + ond.stuc_m2_woonkamer + " m²");
+                      if (ond.stuc_notitie)       infos.push(ond.stuc_notitie);
                     }
                     if (col === "Loodgieter") {
                       if (ond.lood_buitenkraan) infos.push("Buitenkraan: " + ond.lood_buitenkraan);
+                      if (ond.lood_buitenkraan_positie) infos.push(ond.lood_buitenkraan_positie);
+                      if (ond.lood_hwa_materiaal) infos.push("HWA: " + ond.lood_hwa_materiaal);
+                      if (ond.lood_hwa_kant)      infos.push(ond.lood_hwa_kant);
                       if (ond.lood_notitie)     infos.push(ond.lood_notitie);
                     }
                     if (col === "Container") {
