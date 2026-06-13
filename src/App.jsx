@@ -2474,66 +2474,9 @@ function Tijdschema({ projects, setProjects, updateTeam }) {
   const totalW = cols.length*COL_W;
 
   // Month quick buttons
-  function MonthPicker() {
-    return (
-      <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:8}}>
-        {[2026,2027].map(y=>(
-          <div key={y} style={{display:"flex",gap:2,alignItems:"center"}}>
-            <span style={{fontSize:10,fontWeight:700,color:"#90A4AE",width:30}}>{y}</span>
-            {YEAR_MONTHS.map((m,mi)=>{
-              const isNow=today.getMonth()===mi&&today.getFullYear()===y;
-              const isActive=anchor.getMonth()===mi&&anchor.getFullYear()===y&&viewMode==="month";
-              const cnt=allProjects.filter(p=>{const d=parseD(p.date);return d&&d.getMonth()===mi&&d.getFullYear()===y;}).length;
-              return (
-                <button key={m} onClick={()=>{
-                  setViewMode("month");
-                  // Scroll horizontally to this month
-                  setTimeout(()=>{
-                    const el = scrollRef.current; if(!el) return;
-                    // find column index for this month
-                    const targetDate = new Date(y,mi,1);
-                    let x=0;
-                    for(let i=0;i<cols.length;i++){
-                      if(cols[i].start.getFullYear()===y && cols[i].start.getMonth()===mi){ x=i*COL_W; break; }
-                    }
-                    el.scrollLeft = Math.max(0, x);
-                  }, 30);
-                  // Scroll gantt vertically to first project of this month
-                  setTimeout(()=>{
-                    const el = ganttRef.current;
-                    if (!el) return;
-                    const firstIdx = allProjects.findIndex(p=>{
-                      const d=parseD(p.date);
-                      return d && d.getMonth()===mi && d.getFullYear()===y;
-                    });
-                    if (firstIdx >= 0) {
-                      const headerH = 44 + 2; // two header rows
-                      el.scrollTop = firstIdx * ROW_H;
-                    }
-                  }, 50);
-                }}
-                  style={{padding:"2px 6px",borderRadius:4,border:"none",cursor:"pointer",
-                    fontSize:10,fontWeight:isActive?800:500,position:"relative",
-                    background:isActive?"#E65100":isNow?"#FFF3E0":"#F0F2F5",
-                    color:isActive?"#fff":isNow?"#E65100":"#546E7A"}}>
-                  {m}
-                  {cnt>0&&<span style={{position:"absolute",top:-4,right:-3,
-                    background:isActive?"#fff":"#E65100",color:isActive?"#E65100":"#fff",
-                    borderRadius:8,fontSize:8,fontWeight:900,padding:"0 3px",lineHeight:"13px"}}>{cnt}</span>}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <div style={{fontFamily:"Inter,sans-serif"}}>
-
-      {/* Maand snelkeuze */}
-      <MonthPicker />
 
       {/* Controls */}
       <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:12}}>
