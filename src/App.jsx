@@ -2351,6 +2351,26 @@ function Tijdschema({ projects, setProjects }) {
   const isDraggingBar  = useRef(false);
   const timelineRef    = useRef(null);
 
+  // Scroll timeline to show today on load and viewMode change
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el) return;
+    // Find today's position in cols
+    const todayMs = today.getTime();
+    let todayX = 0;
+    for (let i = 0; i < cols.length; i++) {
+      const { start, end } = cols[i];
+      if (todayMs >= start.getTime() && todayMs <= end.getTime()) {
+        const frac = (todayMs - start.getTime()) / (end.getTime() - start.getTime() + 1);
+        todayX = i * COL_W + frac * COL_W;
+        break;
+      }
+    }
+    // Center today on screen
+    const centerOffset = el.clientWidth / 2;
+    el.scrollLeft = Math.max(0, todayX - centerOffset);
+  }, [viewMode, anchor]);
+
   // ── Date helpers ────────────────────────────────────────────────────
   function parseD(str = "") {
     if (!str) return null;
@@ -2815,26 +2835,33 @@ function Tijdschema({ projects, setProjects }) {
           })}
         </div>
 
-        {/* RIGHT: scrollable timeline */}
+        {/* RIGHT: scrollable timeline — drag to scroll */}
         <div ref={timelineRef}
-          style={{ flex:1, overflowX:"auto", overflowY:"hidden", cursor:"grab", userSelect:"none" }}
+          style={{ flex:1, overflowX:"scroll", overflowY:"hidden",
+            cursor:"grab", userSelect:"none", WebkitOverflowScrolling:"touch" }}
           onMouseDown={e=>{
             if (isDraggingBar.current) return;
             if (e.target.closest && e.target.closest("[data-gantt-bar]")) return;
             const el = timelineRef.current;
-            let sx = e.pageX + el.scrollLeft;
+            if (!el) return;
+            const startX = e.pageX;
+            const startScroll = el.scrollLeft;
+            el.style.cursor = "grabbing";
+            el.style.userSelect = "none";
             function mv(ev) {
               if (isDraggingBar.current) return;
-              el.scrollLeft = sx - ev.pageX;
-              el.style.cursor = "grabbing";
+              const dx = ev.pageX - startX;
+              el.scrollLeft = startScroll - dx;
             }
             function up() {
+              el.style.cursor = "grab";
+              el.style.userSelect = "none";
               document.removeEventListener("mousemove", mv);
               document.removeEventListener("mouseup", up);
-              el.style.cursor = "grab";
             }
             document.addEventListener("mousemove", mv);
             document.addEventListener("mouseup", up);
+            e.preventDefault();
           }}>
 
           <div style={{ width: cols.length * COL_W, minWidth: cols.length * COL_W }}>
