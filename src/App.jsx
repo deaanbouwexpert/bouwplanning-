@@ -2588,7 +2588,7 @@ function Tijdschema({ projects, setProjects }) {
   }
 
   const COL_W = viewMode === "day" ? 38 : viewMode === "week" ? 52 : viewMode === "month" ? 58 : 56;
-  const ROW_H    = 32;  // row height — same on left and right
+  const ROW_H    = 52;  // row height — same on left and right (3 lines: naam + badges + leider/collega)
   const HEADER_H = 22;  // each header row height
   const NAME_W = 190;
   const dayNames = ["Zo","Ma","Di","Wo","Do","Vr","Za"];
@@ -2862,8 +2862,8 @@ function Tijdschema({ projects, setProjects }) {
                         {p.name}
                       </div>
                     )}
-                    {/* badges */}
-                    <div style={{ display:"flex", gap:3, alignItems:"center", marginTop:1, flexWrap:"nowrap" }}>
+                    {/* rij 1: type + weken + overlap */}
+                    <div style={{ display:"flex", gap:3, alignItems:"center", marginTop:1 }}>
                       {typeInfo && (
                         <span style={{ fontSize:8, fontWeight:700, flexShrink:0,
                           background:typeInfo.bg, color:typeInfo.text,
@@ -2886,22 +2886,27 @@ function Tijdschema({ projects, setProjects }) {
                         </span>
                       )}
                       {hasOverlap && <span style={{ fontSize:9, color:"#B71C1C", fontWeight:800 }}>⚠️</span>}
+                    </div>
+                    {/* rij 2: leider + collega */}
+                    <div style={{ display:"flex", gap:4, alignItems:"center", marginTop:2, flexWrap:"wrap" }}>
                       {editLeider===p.id ? (
                         <select autoFocus value={p.leider||""}
                           onChange={e=>saveLeider(p.id,e.target.value)}
                           onBlur={()=>setEditLeider(null)}
                           style={{ fontSize:9, borderRadius:3, border:"1px solid #90CAF9",
-                            padding:"1px 3px", background:"#fff", maxWidth:85 }}>
+                            padding:"2px 4px", background:"#fff", maxWidth:110 }}>
                           <option value="">— geen —</option>
                           {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
                         </select>
                       ) : (
                         <span onClick={e=>{ e.stopPropagation(); setEditLeider(p.id); }}
                           title="Klik om projectleider te wijzigen"
-                          style={{ fontSize:9, color:p.leider?"#1565C0":"#BDBDBD",
-                            fontWeight:p.leider?600:400,
-                            cursor:"pointer", whiteSpace:"nowrap", overflow:"hidden",
-                            textOverflow:"ellipsis", maxWidth:78 }}>
+                          style={{ fontSize:9, fontWeight:600, cursor:"pointer",
+                            color:p.leider?"#1565C0":"#BDBDBD",
+                            background:p.leider?"#E3F2FD":"transparent",
+                            border:p.leider?"1px solid #90CAF9":"1px dashed #BDBDBD",
+                            borderRadius:3, padding:"1px 5px",
+                            whiteSpace:"nowrap" }}>
                           {p.leider ? `👷 ${p.leider}` : "+ leider"}
                         </span>
                       )}
@@ -2910,17 +2915,19 @@ function Tijdschema({ projects, setProjects }) {
                           onChange={e=>saveCollega(p.id,e.target.value)}
                           onBlur={()=>setEditCollega(null)}
                           style={{ fontSize:9, borderRadius:3, border:"1px solid #A5D6A7",
-                            padding:"1px 3px", background:"#fff", maxWidth:85 }}>
+                            padding:"2px 4px", background:"#fff", maxWidth:110 }}>
                           <option value="">— geen —</option>
                           {MEDEWERKERS.map(n=><option key={n} value={n}>{n}</option>)}
                         </select>
                       ) : (
                         <span onClick={e=>{ e.stopPropagation(); setEditCollega(p.id); }}
                           title="Klik om collega te wijzigen"
-                          style={{ fontSize:9, color:p.collega?"#2E7D32":"#BDBDBD",
-                            fontWeight:p.collega?600:400,
-                            cursor:"pointer", whiteSpace:"nowrap", overflow:"hidden",
-                            textOverflow:"ellipsis", maxWidth:78 }}>
+                          style={{ fontSize:9, fontWeight:600, cursor:"pointer",
+                            color:p.collega?"#2E7D32":"#BDBDBD",
+                            background:p.collega?"#E8F5E9":"transparent",
+                            border:p.collega?"1px solid #A5D6A7":"1px dashed #BDBDBD",
+                            borderRadius:3, padding:"1px 5px",
+                            whiteSpace:"nowrap" }}>
                           {p.collega ? `👷 ${p.collega}` : "+ collega"}
                         </span>
                       )}
@@ -3578,7 +3585,7 @@ function Tijdschema({ projects, setProjects }) {
   }
 
   const COL_W = viewMode === "day" ? 38 : viewMode === "week" ? 52 : viewMode === "month" ? 58 : 56;
-  const ROW_H    = 32;  // row height — same on left and right
+  const ROW_H    = 52;  // row height — same on left and right (3 lines: naam + badges + leider/collega)
   const HEADER_H = 22;  // each header row height
   const NAME_W = 190;
   const dayNames = ["Zo","Ma","Di","Wo","Do","Vr","Za"];
