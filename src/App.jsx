@@ -2348,6 +2348,7 @@ function Tijdschema({ projects, setProjects }) {
   const [filterType,   setFilterType]   = useState("");
   const [search,       setSearch]       = useState("");
   const [dragging,     setDragging]     = useState(null);  // { pid, startX, origDate }
+  const isDraggingBar = useRef(false);
 
   // ── Date helpers ────────────────────────────────────────────────────
   function parseD(str = "") {
@@ -2518,6 +2519,8 @@ function Tijdschema({ projects, setProjects }) {
 
   function startDrag(e, p) {
     e.stopPropagation();
+    e.preventDefault();
+    isDraggingBar.current = true;
     const origDate = p.date;
     const startX = e.clientX;
     let lastDate = origDate;
@@ -2536,6 +2539,7 @@ function Tijdschema({ projects, setProjects }) {
     async function onUp() {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
+      isDraggingBar.current = false;
       setDragging(null);
       // Save the final date
       const finalDate = lastDate;
@@ -2653,7 +2657,7 @@ function Tijdschema({ projects, setProjects }) {
         {/* View mode */}
         <div style={{ display:"flex", background:"#F0F2F5", borderRadius:8, padding:3 }}>
           {[["day","Dag"],["week","Week"],["month","Maand"],["year","Jaar"]].map(([k,l]) => (
-            <button key={k} onClick={()=>{ setViewMode(k); goToday(); }}
+            <button key={k} onClick={()=>{ setViewMode(k); }}
               style={{ background:viewMode===k?"#1C2B3A":"transparent",
                 color:viewMode===k?"#fff":"#546E7A",
                 border:"none", borderRadius:6, padding:"6px 14px",
@@ -2714,8 +2718,11 @@ function Tijdschema({ projects, setProjects }) {
         border:"1px solid #DDE3E9", boxShadow:"0 2px 12px rgba(0,0,0,.07)",
         background:"#fff", cursor:"grab", userSelect:"none" }}
         onMouseDown={e=>{
+          if (isDraggingBar.current) return;
+          // Don't scroll if clicking on a bar (target has cursor:grab style)
+          if (e.target.closest && e.target.closest('[data-gantt-bar]')) return;
           const el=e.currentTarget; let sx=e.pageX+el.scrollLeft;
-          const mv=ev=>{ el.scrollLeft=sx-ev.pageX; };
+          const mv=ev=>{ if(isDraggingBar.current) return; el.scrollLeft=sx-ev.pageX; };
           const up=()=>{ document.removeEventListener("mousemove",mv); document.removeEventListener("mouseup",up); el.style.cursor="grab"; };
           el.style.cursor="grabbing";
           document.addEventListener("mousemove",mv);
@@ -2876,6 +2883,7 @@ function Tijdschema({ projects, setProjects }) {
                     const isDragging = dragging?.pid === p.id;
                     return (
                       <div
+                        data-gantt-bar="1"
                         onMouseDown={e=>{ e.stopPropagation(); startDrag(e, p); }}
                         style={{ position:"absolute", left, width: Math.max(width,4),
                           top:"50%", transform:"translateY(-50%)",
@@ -3770,7 +3778,7 @@ export default function App() {
         <h2 style={{ margin:0, fontSize:17, color:"#1C2B3A" }}>
           { tab==="checklist"    ? "Projecten checklist"
           : tab==="jaarplanning" ? "Jaarplanning"
-          : tab==="tijdschema"   ? "Weekoverzicht"
+          : tab==="tijdschema"   ? "Tijdschema"
           : tab==="onderdelen"   ? "Onderdelen overzicht"
           : tab==="omzet"        ? "Omzet overzicht"
           :                       "Wijzigingenlog" }
