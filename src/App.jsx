@@ -820,7 +820,7 @@ function drukWerkbon(p) {
   </div>
   <div style="text-align:right;font-size:12px;opacity:.75">
     Werkbon gegenereerd: ${new Date().toLocaleDateString("nl-NL")}<br>
-    ${p.leider ? "Projectleider: " + p.leider : ""}${p.collega ? " &amp; " + p.collega : ""}
+    ${p.leider ? "Projectleider: " + p.leider : ""}${p.collega ? " &amp; " + p.collega : ""}${p.bedrag ? "<br><strong style='color:#2E7D32;font-size:15px'>€ " + Number(p.bedrag).toLocaleString("nl-NL") + "</strong>" : ""}
   </div>
 </div>
 
@@ -989,6 +989,7 @@ function TeamEditInline({ p, onSave, onClose }) {
   const [ond,         setOnd]        = useState(p.ond || {});
   function ondSet(key, val) { setOnd(o => ({...o, [key]: val})); }
   const [klantNaam,   setKlantNaam]  = useState(p.klantNaam||"");
+  const [bedrag,      setBedrag]     = useState(p.bedrag||"");
   const [klantTel,    setKlantTel]   = useState(p.klantTel||"");
   const [tab,         setTab]        = useState("algemeen");
   const [saving,      setSaving]     = useState(false);
@@ -1007,7 +1008,7 @@ function TeamEditInline({ p, onSave, onClose }) {
   async function save() {
     setSaving(true);
     await onSave({ name: naam, leider, collega, weken, date: startdatum, type,
-      ingemeten, actief, ond, klantNaam, klantTel });
+      ingemeten, actief, ond, klantNaam, klantTel, bedrag });
     setSaving(false);
     setSaved(true);
     setTimeout(() => { setSaved(false); onClose(); }, 900);
@@ -1095,6 +1096,15 @@ function TeamEditInline({ p, onSave, onClose }) {
             <option value="">— Type project —</option>
             {PROJECT_TYPES.map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
           </select>
+
+          {sectionLabel("Omzet")}
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ fontSize:13, fontWeight:700, color:"#2E7D32" }}>€</span>
+            <input type="number" min="0" value={bedrag} onChange={e=>setBedrag(e.target.value)}
+              placeholder="bv. 45000"
+              style={{ flex:1, fontSize:13, padding:"6px 8px", borderRadius:5,
+                border:"2px solid #2E7D32", outline:"none", fontWeight:700, color:"#2E7D32" }} />
+          </div>
         </>}
 
         {/* ── TAB: ONDERDELEN ── */}
@@ -1293,7 +1303,7 @@ function TeamEditInline({ p, onSave, onClose }) {
               color:"#fff", transition:"background .2s" }}>
             {saved ? "✓ Opgeslagen!" : saving ? "Opslaan..." : "✓ Opslaan"}
           </button>
-          <button onClick={()=>drukWerkbon({...p, ond, actief, leider, collega, weken, date:startdatum, type, klantNaam, klantTel})}
+          <button onClick={()=>drukWerkbon({...p, ond, actief, leider, collega, weken, date:startdatum, type, klantNaam, klantTel, bedrag})}
             style={{ fontSize:11, background:"#1C2B3A", color:"#fff", border:"none",
               borderRadius:5, padding:"9px 12px", cursor:"pointer", fontWeight:700 }}>🖨️ PDF</button>
           <button onClick={onClose}
@@ -1307,13 +1317,13 @@ function TeamEditInline({ p, onSave, onClose }) {
 
 // ── NIEUW PROJECT FORM ────────────────────────────────────────────────
 function NieuwProjectForm({ onSave, onCancel }) {
-  const [name,       setName]       = useState("");
-  const [date,       setDate]       = useState("");
-  const [leider,     setLeider]     = useState("");
-  const [collega,    setCollega]    = useState("");
-  const [duur,       setDuur]       = useState("");
-  const [oplevering, setOplevering] = useState("");
-  const [type,       setType]       = useState("");
+  const [name,   setName]   = useState("");
+  const [date,   setDate]   = useState("");
+  const [leider, setLeider] = useState("");
+  const [collega,setCollega]= useState("");
+  const [weken,  setWeken]  = useState("");
+  const [type,   setType]   = useState("");
+  const [bedrag, setBedrag] = useState("");
 
   return (
     <div style={{ background:"#E3F2FD", border:"1px solid #90CAF9", borderRadius:8,
@@ -1332,11 +1342,10 @@ function NieuwProjectForm({ onSave, onCancel }) {
           <MedewerkerSelect label="👷 Collega" value={collega} onChange={setCollega} border="1px solid #CFD8DC" />
         </div>
         <div>
-          <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>📅 Duur</label>
-          <input value={duur} onChange={e=>setDuur(e.target.value)} placeholder="bv. 6 weken"
-            style={{ padding:"7px 10px", borderRadius:5, border:"1px solid #CFD8DC", fontSize:12, width:100, outline:"none" }} />
+          <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>⏱ Weken</label>
+          <input type="number" min="1" max="52" value={weken} onChange={e=>setWeken(e.target.value)} placeholder="bv. 6"
+            style={{ padding:"7px 10px", borderRadius:5, border:"1px solid #CFD8DC", fontSize:12, width:80, outline:"none" }} />
         </div>
-        <DatumPicker label="🚚 Datum levering" value={oplevering} onChange={setOplevering} />
         <div>
           <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>🏗️ Type</label>
           <select value={type} onChange={e=>setType(e.target.value)}
@@ -1345,7 +1354,15 @@ function NieuwProjectForm({ onSave, onCancel }) {
             {PROJECT_TYPES.map(t => <option key={t.label} value={t.label}>{t.label}</option>)}
           </select>
         </div>
-        <button onClick={()=>onSave({ name, date, leider, collega, duur, oplevering, type })}
+        <div>
+          <label style={{ fontSize:11, fontWeight:600, color:"#546E7A", display:"block", marginBottom:3 }}>💶 Bedrag</label>
+          <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+            <span style={{ fontSize:12, color:"#546E7A", fontWeight:700 }}>€</span>
+            <input type="number" min="0" value={bedrag} onChange={e=>setBedrag(e.target.value)} placeholder="bv. 45000"
+              style={{ padding:"7px 10px", borderRadius:5, border:"2px solid #E65100", fontSize:12, width:110, outline:"none", fontWeight:700 }} />
+          </div>
+        </div>
+        <button onClick={()=>onSave({ name, date, leider, collega, weken, type, bedrag })}
           style={{ padding:"9px 18px", borderRadius:6, border:"none", background:"#E65100",
             color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer" }}>Opslaan</button>
         <button onClick={onCancel}
@@ -1569,6 +1586,11 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
                 {p.klantNaam && (
                   <div style={{ fontSize:10, color:"#546E7A" }}>
                     👤 {p.klantNaam}{p.klantTel ? " · "+p.klantTel : ""}
+                  </div>
+                )}
+                {p.bedrag && (
+                  <div style={{ fontSize:10, fontWeight:700, color:"#2E7D32" }}>
+                    💶 € {Number(p.bedrag).toLocaleString("nl-NL")}
                   </div>
                 )}
                 {canEdit && !p.afgerond && (
@@ -1980,10 +2002,10 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
       {/* ── NIEUW PROJECT FORM ── */}
       {newProj && canEdit && (
         <NieuwProjectForm
-          onSave={({ name, date, leider, collega, duur, oplevering, type }) => {
+          onSave={({ name, date, leider, collega, weken, type, bedrag }) => {
             if (!name.trim()) return;
             const id = Math.max(...projects.map(p=>p.id), 0) + 1;
-            const updated = [...projects, { id, name, date, einddatum:"", type, leider, collega, duur, oplevering, afgerond:false, statuses:Array(COLUMNS.length).fill("") }];
+            const updated = [...projects, { id, name, date, einddatum:"", type, leider, collega, weken, bedrag, afgerond:false, statuses:Array(COLUMNS.length).fill("") }];
             setProjects(updated);
             saveData("bouw_projects", updated);
             addLog({ type:"project_add", project: name, datum: date });
@@ -2194,6 +2216,15 @@ function Jaarplanning({ projects, setProjects, onProjectClick }) {
                 padding:"3px 10px", fontSize:12, fontWeight:700 }}>
                 {ps.length} project{ps.length>1?"en":""}
               </div>
+              {(() => {
+                const totaal = ps.reduce((sum, p) => sum + (Number(p.bedrag)||0), 0);
+                return totaal > 0 ? (
+                  <div style={{ background:"#E8F5E9", color:"#2E7D32", borderRadius:6,
+                    padding:"3px 10px", fontSize:12, fontWeight:700 }}>
+                    💶 € {totaal.toLocaleString("nl-NL")}
+                  </div>
+                ) : null;
+              })()}
               <div style={{ flex:1, height:2, background:"#F0F2F5", borderRadius:1 }}/>
             </div>
 
@@ -2272,6 +2303,11 @@ function Jaarplanning({ projects, setProjects, onProjectClick }) {
                     <div style={{ fontSize:11, color:"#546E7A", borderTop:"1px solid #F0F2F5",
                       paddingTop:6, marginTop:4 }}>
                       👷 {p.leider}{p.collega ? ` & ${p.collega}` : ""}
+                    </div>
+                  )}
+                  {p.bedrag && (
+                    <div style={{ fontSize:12, fontWeight:800, color:"#2E7D32", marginTop:4 }}>
+                      💶 € {Number(p.bedrag).toLocaleString("nl-NL")}
                     </div>
                   )}
                 </div>
