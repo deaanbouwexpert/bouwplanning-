@@ -3469,7 +3469,7 @@ export default function App() {
       } catch {}
     }
 
-    const interval = setInterval(checkForUpdates, 8000);
+    const interval = setInterval(checkForUpdates, 3000);
     return () => clearInterval(interval);
   }, [currentUser]);
 
