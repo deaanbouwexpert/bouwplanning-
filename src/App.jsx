@@ -3444,7 +3444,36 @@ export default function App() {
     })();
   },[]);
 
-  if (loading || !projects) return (
+  // ── REALTIME SYNC — poll elke 8 seconden ─────────────────────────────
+  useEffect(() => {
+    if (!currentUser) return;
+    let lastUpdated = null;
+
+    async function checkForUpdates() {
+      try {
+        // Check updated_at timestamp of bouw_projects
+        const rows = await sbFetch(`/rest/v1/appdata?key=eq.bouw_projects&select=updated_at`);
+        if (!rows || rows.length === 0) return;
+        const serverTime = rows[0].updated_at;
+        if (lastUpdated === null) { lastUpdated = serverTime; return; }
+        if (serverTime !== lastUpdated) {
+          lastUpdated = serverTime;
+          // Reload all data silently
+          const [newProjects, newLogs] = await Promise.all([
+            loadData("bouw_projects", null),
+            loadData("bouw_logs", []),
+          ]);
+          if (newProjects) setProjects(newProjects);
+          if (newLogs) setLogs(newLogs);
+        }
+      } catch {}
+    }
+
+    const interval = setInterval(checkForUpdates, 8000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
+
+
     <div style={{ minHeight:"100vh", background:"#1C2B3A",
       display:"flex", alignItems:"center", justifyContent:"center",
       flexDirection:"column", gap:12,
