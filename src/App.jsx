@@ -3474,6 +3474,7 @@ export default function App() {
   }, [currentUser]);
 
 
+  if (loading || !projects) return (
     <div style={{ minHeight:"100vh", background:"#1C2B3A",
       display:"flex", alignItems:"center", justifyContent:"center",
       flexDirection:"column", gap:12,
