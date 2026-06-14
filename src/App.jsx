@@ -3425,13 +3425,50 @@ export default function App() {
         // Migratie: voeg bedrag toe vanuit DEFAULT_PROJECTS als het nog leeg is
         const bedragMap = {};
         DEFAULT_PROJECTS.forEach(p => { if (p.bedrag) bedragMap[p.id] = p.bedrag; });
+
+        // Migratie: Porfier 6 Zoetermeer onderdelen invullen vanuit bouwraming
+        const porfierOnd = {
+          graaf_jn:"Ja", graaf_afvoer:"Ja", graaf_m3:"11", graaf_tegels:"Nee", graaf_schutting:"Nee",
+          staal_jn:"Ja", staal_achtergevel:"Ja", staal_binnen_dragend:"Ja", staal_buiten_dragend:"Nee",
+          staal_notitie:"IPE staalprofiel 5.3m, kraanhulp inbegrepen",
+          constructie_jn:"Ja", constructie_notitie:"Constructie berekening €850 onderaanneming",
+          steen_jn:"Ja", steen_type:"Steen-strips", steen_m2:"13.40", steen_code:"GEBRICKS PS isolatie",
+          kozijn_jn:"Ja", kozijn_materiaal:"Kunststof", kozijn_kleur_binnen:"", kozijn_kleur_buiten:"",
+          kozijn_aantal:"1", kozijn_maten:"10 m² schuifpui", kozijn_notitie:"Kunststof schuifpui incl. HR++ glas",
+          licht_jn:"Ja", lichtstraat_maat:"3.00 m²", lichtstraat_notitie:"Lichtstraat incl. opstanden",
+          hei_jn:"Ja", hei_palen:"", hei_diepte:"", hei_toegang:"Achterom / tuinhek",
+          hei_notitie:"Paalfundering, 24m stalenbuis heipalen onderaanneming",
+          fund_jn:"Ja", fund_type:"Broodjesvloer", fund_beton:"1.50", fund_notitie:"VBI combi vloerbalk S1, druklaag 13.25m²",
+          electra_jn:"Ja", el_spotjes_binnen:"6", el_spotjes_buiten:"2", el_stopcontacten:"2",
+          el_licht_buiten:"2", el_notitie:"6 inbouwspots binnen, 2 wandcontactdozen + buitenlichten",
+          dak_jn:"Ja", dak_type:"EPDM", dak_notitie:"EPDM dakbedekking 13.25m², isolatie 140mm",
+          lood_jn:"Ja", lood_buitenkraan:"Ja", lood_buitenkraan_positie:"",
+          lood_hwa_materiaal:"PVC", lood_hwa_kant:"Rechts", lood_notitie:"Bonfix vorstvrije gevelkraan",
+          cont_jn:"Ja", cont_aantal:"1", cont_notitie:"Afvalcontainer 10m³",
+          klantNaam:"Tessa Kooyman", klantTel:"0629796930",
+        };
+
         let migrated = false;
         const merged = savedProjects.map(p => {
+          let updated = { ...p };
           if (!p.bedrag && bedragMap[p.id]) {
+            updated.bedrag = bedragMap[p.id];
             migrated = true;
-            return { ...p, bedrag: bedragMap[p.id] };
           }
-          return p;
+          // Porfier 6 Zoetermeer — vul onderdelen in als nog leeg
+          if (p.id === 25 && !p.ond?.graaf_jn) {
+            updated.ond = { ...(p.ond||{}), ...porfierOnd };
+            updated.klantNaam = porfierOnd.klantNaam;
+            updated.klantTel  = porfierOnd.klantTel;
+            updated.actief = {
+              "Graafwerk":true,"Staal":true,"Constructie berekening":true,
+              "Steen-strips / Metselwerk":true,"Kozijn":true,"Lichtstraat":true,
+              "Heiwerk":true,"Fundering":true,"Electra":true,"Dakbedekking":true,
+              "Loodgieter":true,"Container":true
+            };
+            migrated = true;
+          }
+          return updated;
         });
         if (migrated) {
           await saveData("bouw_projects", merged);
