@@ -1366,7 +1366,7 @@ function Checklist({ projects, setProjects, canEdit, addLog, highlightProject, c
   const [editPos,   setEditPos]   = useState({ top:0, left:0 });
   const [search,    setSearch]    = useState("");
   const [filter,    setFilter]    = useState("");
-  const [openMonth, setOpenMonth] = useState(null);
+  const [openMonth, setOpenMonth] = useState(new Date().getMonth());
   const [newProj,   setNewProj]   = useState(false);
 
   const [editTeam,  setEditTeam]  = useState(null);
